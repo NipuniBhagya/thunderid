@@ -353,7 +353,9 @@ export default function ApplicationEditPage() {
         </Alert>
       )}
       {/* Header */}
-      <PageTitle>
+      <PageTitle
+        sx={{'& [class*="MuiPageTitle-column1"]': {alignSelf: 'flex-start'}}}
+      >
         <PageTitle.BackButton component={<Link to={RouteConfig.applications.list()} />}>
           {t('applications:edit.page.back')}
         </PageTitle.BackButton>
