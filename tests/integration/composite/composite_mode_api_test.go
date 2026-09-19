@@ -298,6 +298,38 @@ func (suite *CompositeModeSuite) TestIdentityProviderDeclarativeVisibility() {
 		"/connections?category=identity-provider", "connections", "decl-idp-1", "identity_provider")
 }
 
+// A declarative email provider survives the file store and is visible through both the vendor GET
+// and the email-provider listing, with its password masked on read.
+func (suite *CompositeModeSuite) TestEmailProviderDeclarativeVisibility() {
+	client := testutils.GetHTTPClient()
+	// decl-smtp-1 (tests/integration/resources/declarative_resources/connections/
+	// smtp-declarative-1.yaml) is type smtp.
+	resp, err := client.Get(fmt.Sprintf("%s/connections/email-smtp/decl-smtp-1", testutils.TestServerURL))
+	suite.Require().NoError(err)
+	defer resp.Body.Close()
+	suite.Require().Equal(http.StatusOK, resp.StatusCode, "declarative email provider should be visible")
+
+	var declarative map[string]interface{}
+	suite.Require().NoError(json.NewDecoder(resp.Body).Decode(&declarative))
+	suite.Equal("smtp.declarative.example.com", declarative["host"])
+	suite.Equal(float64(587), declarative["port"], "port is an integer in the contract")
+	suite.Equal("starttls", declarative["tls"])
+
+	authentication, ok := declarative["authentication"].(map[string]interface{})
+	suite.Require().True(ok, "the declarative provider should carry an authentication block")
+	suite.Equal("basic", authentication["type"])
+	properties, ok := authentication["properties"].(map[string]interface{})
+	suite.Require().True(ok, "the basic method should carry its field values")
+	suite.Equal("declarative-mailer", properties["username"])
+	suite.Equal("******", properties["password"], "the stored password must be masked on read")
+
+	// There is no runtime-created email provider in this suite, so assert the listing directly
+	// rather than through the merged-collection helper.
+	items := suite.getCollectionItems("/connections?category=email-provider", "connections")
+	suite.Contains(suite.extractCollectionIDs(items), "decl-smtp-1",
+		"the email-provider listing should include the declarative provider")
+}
+
 // AD4: a declarative connection's attributeConfiguration survives the file store and is returned by
 // both the vendor GET and the merged listing, and a database-backed connection created at runtime in the
 // same composite deployment returns its own. This is also the first test to execute

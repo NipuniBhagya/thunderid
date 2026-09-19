@@ -20,7 +20,7 @@ var (
 		},
 		ErrorDescription: tidcommon.I18nMessage{
 			Key:          "error.connectionservice.invalid_category_description",
-			DefaultValue: "The category must be one of: identity-provider, sms-provider",
+			DefaultValue: "The category must be one of: identity-provider, sms-provider, email-provider",
 		},
 	}
 	// ErrorInvalidLimit is the error returned when an invalid limit query parameter is provided.
@@ -47,6 +47,35 @@ var (
 		ErrorDescription: tidcommon.I18nMessage{
 			Key:          "error.connectionservice.invalid_offset_parameter_description",
 			DefaultValue: "The offset parameter must be a non-negative integer",
+		},
+	}
+	// ErrorInvalidConnectionVendor is the error returned when the vendor query parameter on
+	// GET /connections/meta does not name a registered connection vendor.
+	ErrorInvalidConnectionVendor = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "CON-1004",
+		Error: tidcommon.I18nMessage{
+			Key:          "error.connectionservice.invalid_vendor",
+			DefaultValue: "Invalid connection vendor",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key:          "error.connectionservice.invalid_vendor_description",
+			DefaultValue: "The vendor parameter must name a supported connection vendor",
+		},
+	}
+	// ErrorInvalidAuthenticationType is the error returned when a connection payload names an
+	// outbound authentication method this deployment does not implement.
+	ErrorInvalidAuthenticationType = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "CON-1005",
+		Error: tidcommon.I18nMessage{
+			Key:          "error.connectionservice.invalid_authentication_type",
+			DefaultValue: "Invalid authentication type",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key: "error.connectionservice.invalid_authentication_type_description",
+			DefaultValue: "The authentication type must name a method this deployment supports. " +
+				"Call GET /connections/meta to list them.",
 		},
 	}
 )

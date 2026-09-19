@@ -12,6 +12,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/notification"
 	"github.com/thunder-id/thunderid/internal/system/cmodels"
 	"github.com/thunder-id/thunderid/internal/system/error/apierror"
+	"github.com/thunder-id/thunderid/internal/system/outboundauth"
 	sysutils "github.com/thunder-id/thunderid/internal/system/utils"
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
@@ -58,20 +59,47 @@ func propertyValues(props []cmodels.Property) (map[string]string, error) {
 // optional on update, so any secret present in the stored connection but absent from the
 // incoming request is carried over unchanged. A secret that IS present in the request is
 // used verbatim (presence-based — the value is not inspected).
+//
+// An outbound-authentication secret is carried over only while the authentication type is
+// unchanged. Changing the method, or turning authentication off, must not leave the previous
+// method's credential behind for a later switch back to silently reuse.
 func mergeStoredSecrets(incoming, existing []cmodels.Property) []cmodels.Property {
 	incomingNames := make(map[string]bool, len(incoming))
 	for i := range incoming {
 		incomingNames[incoming[i].GetName()] = true
 	}
 
+	authTypeUnchanged := authTypeOf(incoming) == authTypeOf(existing)
+
 	merged := make([]cmodels.Property, 0, len(incoming)+len(existing))
 	merged = append(merged, incoming...)
 	for i := range existing {
-		if existing[i].IsSecret() && !incomingNames[existing[i].GetName()] {
-			merged = append(merged, existing[i])
+		if !existing[i].IsSecret() || incomingNames[existing[i].GetName()] {
+			continue
 		}
+		if outboundauth.OwnsPropertyKey(existing[i].GetName()) && !authTypeUnchanged {
+			continue
+		}
+		merged = append(merged, existing[i])
 	}
 	return merged
+}
+
+// authTypeOf reads the outbound authentication type out of a property bag. The type property
+// is never secret, so it is readable without decryption. An absent value reports the empty
+// string, which compares equal across two bags that both predate outbound authentication.
+func authTypeOf(props []cmodels.Property) string {
+	for i := range props {
+		if props[i].GetName() != outboundauth.PropertyKeyType {
+			continue
+		}
+		value, err := props[i].GetValue()
+		if err != nil {
+			return ""
+		}
+		return value
+	}
+	return ""
 }
 
 // connectionTypeName returns the lowercase connection-type identifier (e.g. "google") that

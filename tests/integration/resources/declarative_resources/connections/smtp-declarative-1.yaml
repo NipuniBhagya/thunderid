@@ -1,0 +1,14 @@
+resource_type: connection
+id: decl-smtp-1
+name: Declarative Test SMTP
+description: A declarative test email provider
+type: email-smtp
+host: smtp.declarative.example.com
+port: 587
+fromAddress: noreply@declarative.example.com
+tls: starttls
+authentication:
+  type: basic
+  properties:
+    username: declarative-mailer
+    password: declarative-secret
