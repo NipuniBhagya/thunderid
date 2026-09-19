@@ -11,7 +11,7 @@ const SENDER_ID_PLACEHOLDER = '{{SENDER_ID}}';
 /**
  * Automatically assigns connections to nodes based on available connections.
  * - Sets idpId in data.properties for IDP-based executors (Google, GitHub, etc.)
- * - Sets senderId in data.properties for SMS OTP executor
+ * - Sets senderId in data.properties for the SMS and Email executors
  *
  * Only auto-assigns when there's exactly one connection configured.
  * If there are multiple connections, the user should select one from the resource panel.
@@ -48,8 +48,8 @@ const autoAssignConnections = (nodes: Node[], availableConnections: ExecutorConn
         return;
       }
 
-      // Handle SMS executor - uses senderId
-      if (executorName === ExecutionTypes.SMSExecutor) {
+      // Handle the sender-backed executors (SMS, Email) - both use senderId
+      if (executorName === ExecutionTypes.SMSExecutor || executorName === ExecutionTypes.EmailExecutor) {
         if (properties?.senderId === SENDER_ID_PLACEHOLDER || properties?.senderId === '' || !properties?.senderId) {
           // Initialize properties if needed
           step.data.properties ??= {};
