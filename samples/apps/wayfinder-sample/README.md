@@ -163,19 +163,19 @@ The agent's client secret defaults to `wayfinder-agent-secret` (set in `thunderi
 
 ### Manual Setup
 
-- Configure SMTP so recovery and invitation emails can be delivered. The sample ships with a built-in local SMTP server (`smtp-server/`) that listens on `127.0.0.1:2525`. No external relay is required. The defaults below match its credentials exactly, so no further editing is needed for local development:
+- Configure an email provider so recovery and invitation emails can be delivered. The sample ships with a built-in local SMTP server (`smtp-server/`) that listens on `127.0.0.1:2525`. No external relay is required. In the Console, go to **Connections**, click **Add custom connection**, choose **Email Provider (SMTP)**, and fill in:
 
-  ```yaml
-  email:
-    smtp:
-      host: "127.0.0.1"
-      port: 2525
-      username: "dev"
-      password: "dev"
-      from_address: "noreply@thunderid.dev"
-      enable_start_tls: false
-      enable_authentication: true
-  ```
+  | Field | Value |
+  | :--- | :--- |
+  | Host | `127.0.0.1` |
+  | Port | `2525` |
+  | From address | `noreply@thunderid.dev` |
+  | Transport security | `None` |
+  | Authentication method | `Username and password` |
+  | Username | `dev` |
+  | Password | `dev` |
+
+  Then open the `wayfinder-recovery-flow` and `wayfinder-onboarding-flow` flows and select this provider on their email steps under **Email Provider**. A flow's email step names the provider it sends through; there is no deployment-wide SMTP configuration.
 
   Once the sample is running, open `http://localhost:8788` to view captured emails in the inbox UI.
 
@@ -221,7 +221,7 @@ Notifications now arrive as SMS. If you already approved the consent during the 
 
 ## Configure the Sample
 
-`backend/`, `smtp-server/`, `ai-agent/`, `frontend/`, and `lounge/` each ship with a `.env.example` listing only the variables you actually need to set. In each of those folders, copy it to `.env` and fill the placeholders. The `smtp-server/.env.example` defaults already match the `email.smtp` settings in `deployment.yaml`, so it works as-is.
+`backend/`, `smtp-server/`, `ai-agent/`, `frontend/`, and `lounge/` each ship with a `.env.example` listing only the variables you actually need to set. In each of those folders, copy it to `.env` and fill the placeholders. The `smtp-server/.env.example` defaults already match the email provider settings above, so it works as-is.
 
 The only placeholder you must replace is in `ai-agent/.env`:
 

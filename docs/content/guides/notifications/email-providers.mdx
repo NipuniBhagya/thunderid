@@ -1,0 +1,155 @@
+---
+title: Configure an Email Provider
+docType: guide
+persona: iam
+description: Connect an SMTP server from the {{ProductName}} Console to deliver account recovery, user invite, and magic link emails.
+---
+
+# Configure an Email Provider
+
+<ProductName /> sends emails, such as account recovery links and user invites, through an email connection. An email connection links <ProductName /> to the mail server that delivers those emails to your users.
+
+One email provider is supported:
+
+- **SMTP**: connects to a standard SMTP server, such as Amazon SES, SendGrid, Mailgun, or your own mail server
+
+## Prerequisites
+
+- A <ProductName /> instance running and accessible
+- You can sign in to the <ProductName /> Console
+- An SMTP server, and credentials for it if it requires authentication
+
+## Add an Email Provider
+
+1. From your mail provider, retrieve the SMTP **host**, **port**, and, if the server requires authentication, a **username** and **password**.
+2. Sign in to the <ProductName /> Console and navigate to **Connections**.
+3. Click the **Add custom connection** card.
+4. On the **Connection type** step, click **SMTP**, then click **Continue**.
+5. Enter a **Connection name**, then click **Continue**.
+6. Enter the following fields, then click **Create connection**:
+
+   | Field | Required | Description |
+   | :--- | :---: | :--- |
+   | **Host** | Yes | Hostname of the SMTP server, for example `smtp.example.com`. |
+   | **Port** | Yes | Port of the SMTP server. Typically `587` for STARTTLS or `465` for implicit TLS. |
+   | **From address** | Yes | Address recipients see the email come from, for example `noreply@example.com`. |
+   | **Sender name** | No | Name shown beside the address, for example `Acme Support`. Recipients see `Acme Support <noreply@example.com>`. Leave blank to show the address alone. |
+   | **Transport security** | No | How the connection is secured: `STARTTLS`, `Implicit TLS (SMTPS)`, or `None`. Defaults to `STARTTLS`. |
+   | **Authentication method** | No | How <ProductName /> signs in to the server. `None` by default. |
+   | **Username** | Conditional | Username for the SMTP server. Required by **Username and password**. |
+   | **Password** | Conditional | Password for the SMTP server. Required by **Username and password**. |
+
+### Authentication
+
+The **Authentication method** field lists the methods your deployment supports. One is available
+today:
+
+| Method | Fields | Description |
+| :--- | :--- | :--- |
+| `None` | | Connects without signing in. For a relay that accepts mail from your network. |
+| `Username and password` | **Username**, **Password** | Signs in with SMTP `AUTH PLAIN`. Requires transport security. |
+
+The Console reads this list from the server, so a method added in a later release appears without
+a Console upgrade.
+
+:::note
+The password is encrypted before it is stored and is never returned by the API, which returns
+`******` in its place. Changing the method, or setting it to `None`, discards the stored password:
+switching back asks for it again rather than silently reusing a credential you did not re-enter.
+:::
+
+### Transport Security
+
+| Mode | Description |
+| :--- | :--- |
+| `STARTTLS` | Connects in plaintext, then upgrades the connection with the `STARTTLS` command. If the server does not offer `STARTTLS`, the send fails rather than falling back to plaintext. |
+| `Implicit TLS (SMTPS)` | Connects over TLS directly, without an upgrade step. |
+| `None` | Sends email unencrypted. |
+
+<ProductName /> requires TLS 1.2 or later and validates the server certificate against the system trust store. Self-signed certificates are not accepted.
+
+:::warning
+`None` sends your emails, and any content in them, in the clear. Use it only against a mail relay on a trusted network. It cannot be combined with an authentication method, because that would send your SMTP credentials unencrypted.
+:::
+
+### Add an Email Provider with the API
+
+You can create the same connection over the connections API:
+
+```bash
+curl -X POST https://localhost:8090/connections/email-smtp \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <access_token>" \
+  -d '{
+    "name": "Corp SMTP",
+    "description": "Transactional mail",
+    "host": "smtp.example.com",
+    "port": 587,
+    "fromAddress": "noreply@example.com",
+    "fromName": "Acme Support",
+    "tls": "starttls",
+    "authentication": {
+      "type": "basic",
+      "properties": {
+        "username": "mailer",
+        "password": "<smtp_password>"
+      }
+    }
+  }'
+```
+
+`tls` accepts `none`, `starttls`, or `implicit`, and defaults to `starttls` when omitted.
+
+`fromName` is optional and affects the `From` header only. The SMTP envelope sender is always the
+bare `fromAddress`, so SPF and DMARC alignment are unchanged by setting a name.
+
+Omit `authentication` to send no credentials. To discover the methods your deployment supports
+and the fields each one takes, call:
+
+```bash
+curl https://localhost:8090/connections/meta?vendor=email-smtp \
+  -H "Authorization: Bearer <access_token>"
+```
+
+Each method lists its fields in the order a form should show them. A field marked
+`"credential": true` is write-only: stored encrypted, returned as `******`, and omitted on update
+to keep the stored value.
+
+## Use an Email Provider in a Flow
+
+An email step sends through the provider selected on that step:
+
+1. Open the flow from **Flows** and select the **Email** executor node.
+2. In the properties panel, choose the provider under **Email Provider**.
+3. Save the flow.
+
+When exactly one email provider is configured, new email steps select it automatically.
+
+## Update an Email Provider
+
+1. Open the connection from the Connections page.
+2. On the **General** tab, edit the fields under **Credentials**.
+3. The **Password** field is write-only: it stays locked until you click **Update**. Leave it unchanged to keep the stored password.
+4. Click **Save changes** in the bar at the bottom of the page. You can click **Discard** instead to abandon your edits.
+
+Changing the **Authentication method** clears the stored password, so set it once you have the new
+method's credentials to hand.
+
+## Remove an Email Provider
+
+1. Open the connection from the Connections page.
+2. On the **General** tab, go to **Danger zone** and click **Delete connection**.
+3. Confirm the deletion in the dialog.
+
+If a flow still references this email provider, the dialog lists the resources and blocks the deletion until you remove or update them.
+
+## Migrate from the SMTP Server Configuration
+
+Earlier releases configured a single SMTP server in `deployment.yaml` under `email.smtp`. That block has been removed: email providers are now the only way to configure email delivery, and an email step without a provider fails rather than falling back to a deployment-wide default.
+
+Nothing is migrated automatically, so create a provider from your existing SMTP settings and select it on every flow that sends email before you upgrade. See [Migrate from deployment.yaml SMTP](../../smtp-server/smtp-server-configuration) for the property mapping.
+
+## Next Steps
+
+- [Notification Templates](../templates): Customize the content of the emails <ProductName /> sends
+- [Build a Flow](../../flows/build-a-flow): Add an email step to a recovery or onboarding flow

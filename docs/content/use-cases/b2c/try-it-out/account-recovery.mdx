@@ -21,24 +21,9 @@ Complete [Set Up Your Environment](../../build-environment) before starting this
 
 ## Set Up Account Recovery
 
-1. Recovery emails are delivered through a SMTP server. Configure a SMTP provider and apply the configuration in
-   `deployment.yaml`.
+1. Recovery emails are delivered through an email provider. In the Console, go to **Connections**, click **Add custom connection**, and create an **SMTP** connection for your mail server. See [Configure an Email Provider](../../../../guides/notifications/email-providers) for the full field reference.
 
-   **Sample SMTP Configuration:**
-
-   ```yaml
-   email:
-     smtp:
-       host: '<smtp-host>'
-       port: <smtp-port>
-       username: '<smtp-username>'
-       password: '<smtp-password>'
-       from_address: '<from-address>'
-       enable_start_tls: true
-       enable_authentication: true
-   ```
-
-2. Restart <ProductName /> for the changes to take effect.
+2. Open the password recovery flow and select the provider on its email step under **Email Provider**. When the SMTP connection is the only one configured, it is selected automatically.
 
 ## Pick Your Pattern
 

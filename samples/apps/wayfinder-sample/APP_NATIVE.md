@@ -24,21 +24,21 @@ Key differences from the redirect config:
 - Password recovery links redirect back to `http://localhost:5173/recovery` (set via `WAYFINDER_RECOVERY_BASE_URL`).
 - No AI agent client or CIBA flows — app-native mode is focused on B2C flows only.
 
-### SMTP (for Password Recovery)
+### Email Provider (for Password Recovery)
 
-Update `deployment.yaml` to deliver recovery emails to the sample inbox:
+Create an email provider that delivers recovery emails to the sample inbox, then select it on the
+`wayfinder-recovery-flow` flow's email step under **Email Provider**. In the Console, go to
+**Connections**, click **Add custom connection**, choose **Email Provider (SMTP)**, and fill in:
 
-```yaml
-email:
-  smtp:
-    host: "127.0.0.1"
-    port: 2525
-    username: "dev"
-    password: "dev"
-    from_address: "noreply@thunderid.dev"
-    enable_start_tls: false
-    enable_authentication: true
-```
+| Field | Value |
+| :--- | :--- |
+| Host | `127.0.0.1` |
+| Port | `2525` |
+| From address | `noreply@thunderid.dev` |
+| Transport security | `None` |
+| Authentication method | `Username and password` |
+| Username | `dev` |
+| Password | `dev` |
 
 ## Configure the Frontend
 

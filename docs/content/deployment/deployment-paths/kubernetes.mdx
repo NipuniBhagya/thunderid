@@ -315,41 +315,7 @@ The `configuration` block in your values file becomes the server's `deployment.y
 
 ### Email
 
-Set `configuration.email.smtp.host` to send email for features such as magic link authentication and user invitations. While the host is empty, the chart omits the section and email-dependent features remain unavailable.
-
-```yaml
-configuration:
-  email:
-    smtp:
-      host: smtp.example.com
-      port: 587
-      fromAddress: noreply@example.com
-      username: your-username
-      password: your-password
-      enableStartTls: true
-      enableAuthentication: true
-```
-
-`port` and `fromAddress` are required once you set `host`. Helm fails the install and names the missing value if either is absent.
-
-The chart stores an inline `password` in the generated `{{productSlug}}-db-credentials` Secret under the `smtp-password` key, then injects it into both the server and the setup job as the `SMTP_PASSWORD` environment variable. To keep the password out of your values file, put it in your own Secret and reference it:
-
-```yaml
-configuration:
-  email:
-    smtp:
-      host: smtp.example.com
-      port: 587
-      fromAddress: noreply@example.com
-      username: your-username
-      passwordRef:
-        name: {{productSlug}}-smtp
-        key: password
-```
-
-Set `passwordRef.name` and `passwordRef.key` together. `passwordRef` takes precedence over `password`, and the chart then writes nothing to the generated Secret.
-
-For provider-specific setup and connection security details, see [Configure SMTP Server](../../../guides/smtp-server/smtp-server-configuration).
+The chart no longer renders an `email` section: email is delivered through **email providers**, connections you create from the Console or the connections API after the server is up. Remove `configuration.email` from your values file, along with any Secret you created for the SMTP password. See [Configure an Email Provider](../../../guides/notifications/email-providers) and [Migrate from deployment.yaml SMTP](../../../guides/smtp-server/smtp-server-configuration).
 
 ### Logging
 
