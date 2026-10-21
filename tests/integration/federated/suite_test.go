@@ -27,6 +27,9 @@ import (
 	"github.com/thunder-id/thunderid/tests/integration/testutils"
 )
 
+// authzMappingResource is the identifier of the resource server the authorization mapping tests use.
+const authzMappingResource = "https://federated-authz-mapping.example.com/api"
+
 // mockOIDCPort is 8100 because 8092-8099, 9091 and 9092 are already bound by other suites, and
 // 8092/8093 are additionally pinned to the GitHub and Google mocks by the deployment.yaml override in
 // testutils/test_utils.go.
@@ -516,7 +519,7 @@ func (s *FederatedMappingSuite) setupAuthzFixtures(idpID, ouID string) {
 
 	rsID, err := testutils.CreateResourceServerWithActions(testutils.ResourceServer{
 		Name:       "Federated Authorization Mapping API",
-		Identifier: "federated-authz-mapping-api",
+		Identifier: authzMappingResource,
 		OUID:       ouID,
 	}, []testutils.Action{
 		{Name: "Read", Handle: "read", Description: "Read access"},
@@ -603,8 +606,10 @@ func (s *FederatedMappingSuite) createAuthApp(
 }
 
 // createScenarioApp creates a flow and an application that runs it, for scenarios whose whole point is a
-// graph the shared flows cannot express. Both are torn down after the test.
-func (s *FederatedMappingSuite) createScenarioApp(flow testutils.Flow, clientID string) string {
+// graph the shared flows cannot express. Both are torn down after the test. inboundAuthConfig replaces the
+// default OAuth profile when given.
+func (s *FederatedMappingSuite) createScenarioApp(
+	flow testutils.Flow, clientID string, inboundAuthConfig ...map[string]interface{}) string {
 	s.T().Helper()
 	flowID, err := testutils.CreateFlow(flow)
 	s.Require().NoError(err, "failed to create flow %s", flow.Handle)
@@ -623,6 +628,7 @@ func (s *FederatedMappingSuite) createScenarioApp(flow testutils.Flow, clientID 
 		OUID:               s.ouID,
 		AuthFlowID:         flowID,
 		RegistrationFlowID: regFlowID,
+		InboundAuthConfig:  inboundAuthConfig,
 		AssertionConfig: map[string]interface{}{
 			"userAttributes": []string{"userType", "ouId"},
 		},
@@ -840,6 +846,12 @@ func (s *FederatedMappingSuite) register(
 	config *testutils.AttributeConfiguration, user *testutils.OIDCUserInfo) map[string]interface{} {
 	s.T().Helper()
 	s.applyConfig(config)
+	return s.registerWithAppliedConfig(user)
+}
+
+// registerWithAppliedConfig drives registration against the connection's current configuration.
+func (s *FederatedMappingSuite) registerWithAppliedConfig(user *testutils.OIDCUserInfo) map[string]interface{} {
+	s.T().Helper()
 	s.mockOIDC.AddUser(user)
 	s.activeSub = user.Sub
 

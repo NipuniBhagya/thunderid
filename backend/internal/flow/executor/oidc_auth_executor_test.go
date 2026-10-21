@@ -17,6 +17,7 @@ import (
 	oauth2const "github.com/thunder-id/thunderid/internal/oauth/oauth2/constants"
 	"github.com/thunder-id/thunderid/tests/mocks/authn/oidcmock"
 	"github.com/thunder-id/thunderid/tests/mocks/authnprovider/managermock"
+	"github.com/thunder-id/thunderid/tests/mocks/entityprovidermock"
 	"github.com/thunder-id/thunderid/tests/mocks/flow/coremock"
 	"github.com/thunder-id/thunderid/tests/mocks/idp/idpmock"
 )
@@ -27,6 +28,7 @@ type OIDCAuthExecutorTestSuite struct {
 	mockIDPService    *idpmock.IDPServiceInterfaceMock
 	mockFlowFactory   *coremock.FlowFactoryInterfaceMock
 	mockAuthnProvider *managermock.AuthnProviderManagerMock
+	mockEntity        *entityprovidermock.EntityProviderInterfaceMock
 	executor          oidcAuthExecutorInterface
 }
 
@@ -39,6 +41,7 @@ func (suite *OIDCAuthExecutorTestSuite) SetupTest() {
 	suite.mockIDPService = idpmock.NewIDPServiceInterfaceMock(suite.T())
 	suite.mockFlowFactory = coremock.NewFlowFactoryInterfaceMock(suite.T())
 	suite.mockAuthnProvider = managermock.NewAuthnProviderManagerMock(suite.T())
+	suite.mockEntity = entityprovidermock.NewEntityProviderInterfaceMock(suite.T())
 
 	mockExec := createMockAuthExecutor(suite.T(), ExecutorNameOIDCAuth)
 	suite.mockFlowFactory.On("CreateExecutor", ExecutorNameOIDCAuth, providers.ExecutorTypeAuthentication,
@@ -46,7 +49,7 @@ func (suite *OIDCAuthExecutorTestSuite) SetupTest() {
 
 	suite.executor = newOIDCAuthExecutor(ExecutorNameOIDCAuth, defaultCodeOnlyInputs, []providers.Input{},
 		suite.mockFlowFactory, suite.mockIDPService, suite.mockOIDCService,
-		suite.mockAuthnProvider, providers.IDPTypeOIDC)
+		suite.mockAuthnProvider, providers.IDPTypeOIDC, suite.mockEntity)
 }
 
 func newOIDCAuthenticatedUser() providers.AuthUser {
@@ -1164,4 +1167,14 @@ func (suite *OIDCAuthExecutorTestSuite) TestProcessAuthFlowResponse_ServerError(
 	assert.Error(suite.T(), err)
 	assert.Contains(suite.T(), err.Error(), "OIDC authentication failed")
 	suite.mockAuthnProvider.AssertExpectations(suite.T())
+}
+
+func (suite *OIDCAuthExecutorTestSuite) TestProcessAuthFlowResponse_SyncsReturningUser() {
+	for _, tc := range federatedSignInSyncCases {
+		suite.Run(tc.name, func() {
+			suite.SetupTest()
+			runFederatedSignInSyncCase(suite.T(), tc, suite.mockAuthnProvider, suite.mockIDPService, suite.mockEntity,
+				suite.executor.ProcessAuthFlowResponse)
+		})
+	}
 }

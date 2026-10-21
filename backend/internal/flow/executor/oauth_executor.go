@@ -15,6 +15,7 @@ import (
 	authncm "github.com/thunder-id/thunderid/internal/authn/common"
 	authnoauth "github.com/thunder-id/thunderid/internal/authn/oauth"
 	authnprovidercm "github.com/thunder-id/thunderid/internal/authnprovider/common"
+	"github.com/thunder-id/thunderid/internal/entityprovider"
 	"github.com/thunder-id/thunderid/internal/flow/common"
 	"github.com/thunder-id/thunderid/internal/flow/core"
 	"github.com/thunder-id/thunderid/internal/idp"
@@ -50,11 +51,12 @@ type oAuthExecutorInterface interface {
 // oAuthExecutor implements the OAuthExecutorInterface for handling generic OAuth authentication flows.
 type oAuthExecutor struct {
 	providers.Executor
-	authService   authnoauth.OAuthAuthnCoreServiceInterface
-	authnProvider providers.AuthnProviderManager
-	idpType       providers.IDPType
-	idpService    idp.IDPServiceInterface
-	logger        *log.Logger
+	authService    authnoauth.OAuthAuthnCoreServiceInterface
+	authnProvider  providers.AuthnProviderManager
+	idpType        providers.IDPType
+	idpService     idp.IDPServiceInterface
+	entityProvider entityprovider.EntityProviderInterface
+	logger         *log.Logger
 }
 
 var _ providers.Executor = (*oAuthExecutor)(nil)
@@ -68,6 +70,7 @@ func newOAuthExecutor(
 	authService authnoauth.OAuthAuthnCoreServiceInterface,
 	authnProvider providers.AuthnProviderManager,
 	idpType providers.IDPType,
+	entityProvider entityprovider.EntityProviderInterface,
 ) oAuthExecutorInterface {
 	if name == "" {
 		name = ExecutorNameOAuth
@@ -94,12 +97,13 @@ func newOAuthExecutor(
 		})
 
 	return &oAuthExecutor{
-		Executor:      base,
-		authService:   authService,
-		authnProvider: authnProvider,
-		idpType:       idpType,
-		idpService:    idpService,
-		logger:        logger,
+		Executor:       base,
+		authService:    authService,
+		authnProvider:  authnProvider,
+		idpType:        idpType,
+		idpService:     idpService,
+		entityProvider: entityProvider,
+		logger:         logger,
 	}
 }
 
@@ -263,19 +267,9 @@ func (o *oAuthExecutor) ProcessAuthFlowResponse(ctx *providers.NodeContext,
 
 	copyFederatedAttributesToRuntimeData(execResp, federatedAttributes)
 
-	resolveAndSetMappedAuthorizationTargets(ctx.Context, execResp, o.idpService, idpID, federatedAttributes, logger)
-
-	setFederatedEntityState(ctx.Context, execResp, o.authnProvider)
-
-	switch ctx.FlowType {
-	case providers.FlowTypeAuthentication:
-		if isAuthenticationWithoutLocalUserAllowed(ctx) {
-			execResp.RuntimeData[common.RuntimeKeyUserEligibleForProvisioning] = dataValueTrue
-		}
-	case providers.FlowTypeRegistration:
-		if isRegistrationWithExistingUserAllowed(ctx) {
-			execResp.RuntimeData[common.RuntimeKeyAllowRegistrationWithExistingUser] = dataValueTrue
-		}
+	if ok, err := completeFederatedSignIn(ctx, execResp, o.idpService, o.entityProvider, o.authnProvider,
+		idpID, federatedAttributes, logger); !ok {
+		return err
 	}
 
 	execResp.Status = providers.ExecComplete

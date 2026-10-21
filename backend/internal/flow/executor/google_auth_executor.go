@@ -1,4 +1,4 @@
-// Copyright 2025 The ThunderID Authors
+// Copyright 2025-2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
 package executor
@@ -6,6 +6,7 @@ package executor
 import (
 	authngoogle "github.com/thunder-id/thunderid/internal/authn/google"
 	authnoidc "github.com/thunder-id/thunderid/internal/authn/oidc"
+	"github.com/thunder-id/thunderid/internal/entityprovider"
 	"github.com/thunder-id/thunderid/internal/flow/core"
 	"github.com/thunder-id/thunderid/internal/idp"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
@@ -25,6 +26,7 @@ func newGoogleOIDCAuthExecutor(
 	idpService idp.IDPServiceInterface,
 	authService authngoogle.GoogleOIDCAuthnServiceInterface,
 	authnProvider providers.AuthnProviderManager,
+	entityProvider entityprovider.EntityProviderInterface,
 ) oidcAuthExecutorInterface {
 	defaultInputs := []providers.Input{
 		{
@@ -40,7 +42,7 @@ func newGoogleOIDCAuthExecutor(
 	}
 
 	base := newOIDCAuthExecutor(ExecutorNameGoogleAuth, defaultInputs, []providers.Input{},
-		flowFactory, idpService, oidcSvcCast, authnProvider, providers.IDPTypeGoogle)
+		flowFactory, idpService, oidcSvcCast, authnProvider, providers.IDPTypeGoogle, entityProvider)
 
 	return &googleOIDCAuthExecutor{
 		oidcAuthExecutorInterface: base,

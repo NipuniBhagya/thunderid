@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/thunder-id/thunderid/internal/entityprovider"
+	entitytypemodel "github.com/thunder-id/thunderid/internal/entitytype/model"
 	"github.com/thunder-id/thunderid/internal/flow/core"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
@@ -368,9 +369,9 @@ func (a *attributeCollector) getInputAttributes(ctx *providers.NodeContext) map[
 		schemaType := schemaTypeForInputType(inputAttr.Type)
 		value, exists := ctx.UserInputs[inputAttr.Identifier]
 		if exists {
-			attributesMap[inputAttr.Identifier] = convertToSchemaType(value, schemaType)
+			attributesMap[inputAttr.Identifier] = entitytypemodel.ConvertToSchemaType(value, schemaType)
 		} else if runtimeValue, exists := ctx.RuntimeData[inputAttr.Identifier]; exists {
-			attributesMap[inputAttr.Identifier] = convertToSchemaType(runtimeValue, schemaType)
+			attributesMap[inputAttr.Identifier] = entitytypemodel.ConvertToSchemaType(runtimeValue, schemaType)
 		}
 	}
 

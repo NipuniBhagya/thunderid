@@ -1,4 +1,4 @@
-// Copyright 2025 The ThunderID Authors
+// Copyright 2025-2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
 package role
@@ -54,6 +54,7 @@ func Initialize(
 	assignmentService := newRoleAssignmentService(
 		roleStore, entityService, groupService, entityTypeService, transactioner, authzService,
 	)
+	entityService.SetRoleMembershipProvider(assignmentService)
 	roleHandler := newRoleHandler(roleService, assignmentService)
 	registerRoutes(mux, roleHandler)
 	exporter := newRoleExporter(roleService, assignmentService)

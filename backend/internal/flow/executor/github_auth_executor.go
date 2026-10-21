@@ -1,4 +1,4 @@
-// Copyright 2025 The ThunderID Authors
+// Copyright 2025-2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
 package executor
@@ -6,6 +6,7 @@ package executor
 import (
 	authngithub "github.com/thunder-id/thunderid/internal/authn/github"
 	authnoauth "github.com/thunder-id/thunderid/internal/authn/oauth"
+	"github.com/thunder-id/thunderid/internal/entityprovider"
 	"github.com/thunder-id/thunderid/internal/flow/core"
 	"github.com/thunder-id/thunderid/internal/idp"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
@@ -25,6 +26,7 @@ func newGithubOAuthExecutor(
 	idpService idp.IDPServiceInterface,
 	authService authngithub.GithubOAuthAuthnServiceInterface,
 	authnProvider providers.AuthnProviderManager,
+	entityProvider entityprovider.EntityProviderInterface,
 ) oAuthExecutorInterface {
 	oauthSvcCast, ok := authService.(authnoauth.OAuthAuthnCoreServiceInterface)
 	if !ok {
@@ -32,7 +34,7 @@ func newGithubOAuthExecutor(
 	}
 
 	base := newOAuthExecutor(ExecutorNameGitHubAuth, []providers.Input{}, []providers.Input{},
-		flowFactory, idpService, oauthSvcCast, authnProvider, providers.IDPTypeGitHub)
+		flowFactory, idpService, oauthSvcCast, authnProvider, providers.IDPTypeGitHub, entityProvider)
 
 	return &githubOAuthExecutor{
 		oAuthExecutorInterface: base,
