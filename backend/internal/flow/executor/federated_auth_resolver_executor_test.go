@@ -4,6 +4,7 @@
 package executor
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 
@@ -14,8 +15,10 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/thunder-id/thunderid/internal/entityprovider"
 	"github.com/thunder-id/thunderid/internal/flow/common"
 	"github.com/thunder-id/thunderid/tests/mocks/authnprovider/managermock"
+	"github.com/thunder-id/thunderid/tests/mocks/entityprovidermock"
 	"github.com/thunder-id/thunderid/tests/mocks/flow/coremock"
 )
 
@@ -23,6 +26,7 @@ type FederatedAuthResolverTestSuite struct {
 	suite.Suite
 	mockFlowFactory   *coremock.FlowFactoryInterfaceMock
 	mockAuthnProvider *managermock.AuthnProviderManagerMock
+	mockEntity        *entityprovidermock.EntityProviderInterfaceMock
 	executor          *federatedAuthResolverExecutor
 }
 
@@ -39,6 +43,7 @@ func newFederatedAuthResolverAuthenticatedUser() providers.AuthUser {
 func (suite *FederatedAuthResolverTestSuite) SetupTest() {
 	suite.mockFlowFactory = coremock.NewFlowFactoryInterfaceMock(suite.T())
 	suite.mockAuthnProvider = managermock.NewAuthnProviderManagerMock(suite.T())
+	suite.mockEntity = entityprovidermock.NewEntityProviderInterfaceMock(suite.T())
 
 	mockExec := createMockExecutor(suite.T(), ExecutorNameFederatedAuthResolver,
 		providers.ExecutorTypeAuthentication)
@@ -46,7 +51,8 @@ func (suite *FederatedAuthResolverTestSuite) SetupTest() {
 		providers.ExecutorTypeAuthentication,
 		([]providers.Input)(nil), ([]providers.Input)(nil), mock.Anything).Return(mockExec)
 
-	suite.executor = newFederatedAuthResolverExecutor(suite.mockFlowFactory, suite.mockAuthnProvider)
+	suite.executor = newFederatedAuthResolverExecutor(suite.mockFlowFactory, suite.mockAuthnProvider,
+		suite.mockEntity)
 }
 
 func (suite *FederatedAuthResolverTestSuite) TestNewFederatedAuthResolverExecutor() {
@@ -315,4 +321,69 @@ func (suite *FederatedAuthResolverTestSuite) TestExecute_IgnoresUnexpectedInputK
 	assert.NoError(suite.T(), err)
 	assert.True(suite.T(), resp.AuthUser.IsAuthenticated())
 	suite.mockAuthnProvider.AssertExpectations(suite.T())
+}
+
+func (suite *FederatedAuthResolverTestSuite) executeResolvedWithPendingSync(
+	pending federatedSync,
+) (*providers.ExecutorResponse, error) {
+	candidatesJSON, _ := json.Marshal([]*providers.Entity{
+		{ID: "user-1", OUHandle: "org-alpha"}, {ID: "user-2", OUHandle: "org-beta"},
+	})
+	pendingJSON, _ := json.Marshal(pending)
+	ctx := &providers.NodeContext{
+		Context:     context.Background(),
+		ExecutionID: "flow-123",
+		UserInputs:  map[string]string{"ouHandle": "org-alpha"},
+		RuntimeData: map[string]string{
+			common.RuntimeKeyCandidateUsers:       string(candidatesJSON),
+			common.RuntimeKeyPendingFederatedSync: string(pendingJSON),
+			"sub":                                 "sub-123",
+		},
+	}
+	mockBase := suite.executor.Executor.(*coremock.ExecutorInterfaceMock)
+	mockBase.On("HasRequiredInputs", mock.Anything, mock.Anything).Return(true)
+	mockBase.On("GetRequiredInputs", mock.Anything).Return([]providers.Input{
+		{Identifier: "ouHandle", Type: "TEXT_INPUT", Required: true},
+	})
+	suite.mockAuthnProvider.On("AuthenticateUser", mock.Anything, mock.Anything, mock.Anything,
+		mock.Anything, mock.Anything, mock.Anything).
+		Return(newFederatedAuthResolverAuthenticatedUser(), providers.AuthenticatedClaims{}, nil)
+	return suite.executor.Execute(ctx)
+}
+
+func (suite *FederatedAuthResolverTestSuite) TestExecute_SyncsTheResolvedUser() {
+	pending := federatedSync{
+		Entity: providers.FederatedEntitySync{Groups: &providers.MembershipSync{IDs: []string{"g1"}}},
+	}
+	suite.mockEntity.On("SyncFederatedEntity", "user-1", pending.Entity).Return(nil).Once()
+
+	resp, err := suite.executeResolvedWithPendingSync(pending)
+
+	suite.NoError(err)
+	suite.Equal(providers.ExecComplete, resp.Status)
+}
+
+func (suite *FederatedAuthResolverTestSuite) TestExecute_RejectedSyncFailsSignIn() {
+	pending := federatedSync{
+		Entity: providers.FederatedEntitySync{Groups: &providers.MembershipSync{IDs: []string{"g1"}}},
+	}
+	suite.mockEntity.On("SyncFederatedEntity", "user-1", pending.Entity).Return(
+		entityprovider.NewEntityProviderError(entityprovider.ErrorCodeSyncRejected, "Sync rejected", "denied")).Once()
+
+	resp, err := suite.executeResolvedWithPendingSync(pending)
+
+	suite.NoError(err)
+	suite.Equal(providers.ExecFailure, resp.Status)
+	suite.Equal(&ErrFederatedUserSyncFailed, resp.Error)
+}
+
+func (suite *FederatedAuthResolverTestSuite) TestExecute_SyncServerErrorIsReturned() {
+	suite.mockEntity.On("SyncFederatedEntity", "user-1", mock.Anything).Return(
+		entityprovider.NewEntityProviderError(entityprovider.ErrorCodeSystemError, "System error", "db down")).Once()
+
+	resp, err := suite.executeResolvedWithPendingSync(
+		federatedSync{Entity: providers.FederatedEntitySync{Roles: &providers.MembershipSync{}}})
+
+	suite.Error(err)
+	suite.Nil(resp)
 }

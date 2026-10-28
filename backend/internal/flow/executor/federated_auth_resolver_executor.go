@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/thunder-id/thunderid/internal/entityprovider"
 	"github.com/thunder-id/thunderid/internal/flow/common"
 	"github.com/thunder-id/thunderid/internal/flow/core"
 	"github.com/thunder-id/thunderid/internal/system/log"
@@ -29,14 +30,16 @@ const (
 // GitHub) has already verified the user's identity.
 type federatedAuthResolverExecutor struct {
 	providers.Executor
-	authnProvider providers.AuthnProviderManager
-	logger        *log.Logger
+	authnProvider  providers.AuthnProviderManager
+	entityProvider entityprovider.EntityProviderInterface
+	logger         *log.Logger
 }
 
 // newFederatedAuthResolverExecutor creates a new instance of FederatedAuthResolverExecutor.
 func newFederatedAuthResolverExecutor(
 	flowFactory core.FlowFactoryInterface,
 	authnProvider providers.AuthnProviderManager,
+	entityProvider entityprovider.EntityProviderInterface,
 ) *federatedAuthResolverExecutor {
 	logger := log.GetLogger().With(
 		log.String(log.LoggerKeyComponentName, federatedAuthResolverLoggerComponentName),
@@ -46,9 +49,10 @@ func newFederatedAuthResolverExecutor(
 		providers.ExecutorTypeAuthentication, nil, nil, &providers.ExecutorMeta{})
 
 	return &federatedAuthResolverExecutor{
-		Executor:      base,
-		authnProvider: authnProvider,
-		logger:        logger,
+		Executor:       base,
+		authnProvider:  authnProvider,
+		entityProvider: entityProvider,
+		logger:         logger,
 	}
 }
 
@@ -159,6 +163,13 @@ func (f *federatedAuthResolverExecutor) Execute(ctx *providers.NodeContext) (*pr
 		logger.Debug(ctx.Context, "Failed to authenticate resolved user")
 		execResp.Status = providers.ExecFailure
 		execResp.Error = &ErrUserNotAuthenticated
+		return execResp, nil
+	}
+
+	if ok, err := syncPendingFederatedUser(ctx, execResp, f.entityProvider, resolvedUser.ID, logger); !ok {
+		if err != nil {
+			return nil, err
+		}
 		return execResp, nil
 	}
 

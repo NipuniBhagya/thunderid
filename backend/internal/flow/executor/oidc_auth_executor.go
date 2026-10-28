@@ -14,6 +14,7 @@ import (
 	authnoauth "github.com/thunder-id/thunderid/internal/authn/oauth"
 	authnoidc "github.com/thunder-id/thunderid/internal/authn/oidc"
 	authnprovidercm "github.com/thunder-id/thunderid/internal/authnprovider/common"
+	"github.com/thunder-id/thunderid/internal/entityprovider"
 	"github.com/thunder-id/thunderid/internal/flow/common"
 	"github.com/thunder-id/thunderid/internal/flow/core"
 	"github.com/thunder-id/thunderid/internal/idp"
@@ -37,11 +38,12 @@ type oidcAuthExecutorInterface interface {
 // oidcAuthExecutor implements the OIDCAuthExecutorInterface for handling generic OIDC authentication flows.
 type oidcAuthExecutor struct {
 	oAuthExecutorInterface
-	idpService    idp.IDPServiceInterface
-	authService   authnoidc.OIDCAuthnCoreServiceInterface
-	authnProvider providers.AuthnProviderManager
-	idpType       providers.IDPType
-	logger        *log.Logger
+	idpService     idp.IDPServiceInterface
+	authService    authnoidc.OIDCAuthnCoreServiceInterface
+	authnProvider  providers.AuthnProviderManager
+	idpType        providers.IDPType
+	entityProvider entityprovider.EntityProviderInterface
+	logger         *log.Logger
 }
 
 var _ providers.Executor = (*oidcAuthExecutor)(nil)
@@ -55,6 +57,7 @@ func newOIDCAuthExecutor(
 	authService authnoidc.OIDCAuthnCoreServiceInterface,
 	authnProvider providers.AuthnProviderManager,
 	idpType providers.IDPType,
+	entityProvider entityprovider.EntityProviderInterface,
 ) oidcAuthExecutorInterface {
 	if name == "" {
 		name = ExecutorNameOIDCAuth
@@ -68,7 +71,7 @@ func newOIDCAuthExecutor(
 	}
 
 	base := newOAuthExecutor(name, defaultInputs, prerequisites,
-		flowFactory, idpService, oauthSvcCast, authnProvider, idpType)
+		flowFactory, idpService, oauthSvcCast, authnProvider, idpType, entityProvider)
 
 	return &oidcAuthExecutor{
 		oAuthExecutorInterface: base,
@@ -76,6 +79,7 @@ func newOIDCAuthExecutor(
 		authService:            authService,
 		authnProvider:          authnProvider,
 		idpType:                idpType,
+		entityProvider:         entityProvider,
 		logger:                 logger,
 	}
 }
@@ -216,19 +220,9 @@ func (o *oidcAuthExecutor) ProcessAuthFlowResponse(ctx *providers.NodeContext,
 
 	copyFederatedAttributesToRuntimeData(execResp, federatedAttributes)
 
-	resolveAndSetMappedAuthorizationTargets(ctx.Context, execResp, o.idpService, idpID, federatedAttributes, logger)
-
-	setFederatedEntityState(ctx.Context, execResp, o.authnProvider)
-
-	switch ctx.FlowType {
-	case providers.FlowTypeAuthentication:
-		if isAuthenticationWithoutLocalUserAllowed(ctx) {
-			execResp.RuntimeData[common.RuntimeKeyUserEligibleForProvisioning] = dataValueTrue
-		}
-	case providers.FlowTypeRegistration:
-		if isRegistrationWithExistingUserAllowed(ctx) {
-			execResp.RuntimeData[common.RuntimeKeyAllowRegistrationWithExistingUser] = dataValueTrue
-		}
+	if ok, err := completeFederatedSignIn(ctx, execResp, o.idpService, o.entityProvider, o.authnProvider,
+		idpID, federatedAttributes, logger); !ok {
+		return err
 	}
 
 	execResp.Status = providers.ExecComplete

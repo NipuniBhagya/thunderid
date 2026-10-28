@@ -61,6 +61,9 @@ CREATE TABLE "GROUP_MEMBER_REFERENCE" (
     PRIMARY KEY (GROUP_ID, MEMBER_TYPE, MEMBER_ID, DEPLOYMENT_ID)
 );
 
+-- Composite index for looking up the groups a member belongs to
+CREATE INDEX idx_group_member_lookup ON "GROUP_MEMBER_REFERENCE" (DEPLOYMENT_ID, MEMBER_TYPE, MEMBER_ID);
+
 -- Table to store indexed entity identifiers for fast lookups (authentication, identification)
 CREATE TABLE "ENTITY_IDENTIFIER" (
     DEPLOYMENT_ID   VARCHAR(255) NOT NULL,

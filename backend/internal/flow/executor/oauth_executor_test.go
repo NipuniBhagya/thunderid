@@ -17,6 +17,7 @@ import (
 	oauth2const "github.com/thunder-id/thunderid/internal/oauth/oauth2/constants"
 	"github.com/thunder-id/thunderid/tests/mocks/authn/oauthmock"
 	"github.com/thunder-id/thunderid/tests/mocks/authnprovider/managermock"
+	"github.com/thunder-id/thunderid/tests/mocks/entityprovidermock"
 	"github.com/thunder-id/thunderid/tests/mocks/flow/coremock"
 	"github.com/thunder-id/thunderid/tests/mocks/idp/idpmock"
 )
@@ -27,6 +28,7 @@ type OAuthExecutorTestSuite struct {
 	mockIDPService    *idpmock.IDPServiceInterfaceMock
 	mockFlowFactory   *coremock.FlowFactoryInterfaceMock
 	mockAuthnProvider *managermock.AuthnProviderManagerMock
+	mockEntity        *entityprovidermock.EntityProviderInterfaceMock
 	executor          oAuthExecutorInterface
 }
 
@@ -39,6 +41,7 @@ func (suite *OAuthExecutorTestSuite) SetupTest() {
 	suite.mockIDPService = idpmock.NewIDPServiceInterfaceMock(suite.T())
 	suite.mockFlowFactory = coremock.NewFlowFactoryInterfaceMock(suite.T())
 	suite.mockAuthnProvider = managermock.NewAuthnProviderManagerMock(suite.T())
+	suite.mockEntity = entityprovidermock.NewEntityProviderInterfaceMock(suite.T())
 
 	mockExec := createMockAuthExecutor(suite.T(), ExecutorNameOAuth)
 	suite.mockFlowFactory.On("CreateExecutor", ExecutorNameOAuth, providers.ExecutorTypeAuthentication,
@@ -46,16 +49,21 @@ func (suite *OAuthExecutorTestSuite) SetupTest() {
 
 	suite.executor = newOAuthExecutor(ExecutorNameOAuth, defaultCodeOnlyInputs, []providers.Input{},
 		suite.mockFlowFactory, suite.mockIDPService, suite.mockOAuthService,
-		suite.mockAuthnProvider, providers.IDPTypeOAuth)
+		suite.mockAuthnProvider, providers.IDPTypeOAuth, suite.mockEntity)
 }
 
-// expectIdentityProviderResolved stubs the AuthorizationRuleMapping resolution ProcessAuthFlowResponse
-// performs on every successful federated login. Returns an IDPDTO with no AttributeConfiguration, so
-// it resolves no mapped targets and leaves runtime data untouched.
+// expectIdentityProviderResolved stubs the IDP lookup ProcessAuthFlowResponse performs on every
+// successful federated login. The IDP has no authorization mapping and doesn't sync attributes, so a
+// returning user's account is left alone.
 func expectIdentityProviderResolved(m *idpmock.IDPServiceInterfaceMock) {
-	m.On("GetIdentityProvider", mock.Anything, "idp-123").Return(&providers.IDPDTO{ID: "idp-123"}, nil).Maybe()
-	m.On("GetDirectAuthorizationTargets", mock.Anything, mock.Anything, mock.Anything).
-		Return(nil, (*tidcommon.ServiceError)(nil)).Maybe()
+	m.On("GetIdentityProvider", mock.Anything, "idp-123").Return(&providers.IDPDTO{
+		ID: "idp-123",
+		AttributeConfiguration: &providers.AttributeConfiguration{
+			Sync: &providers.SyncConfiguration{Attributes: providers.SyncModeNoSync},
+		},
+	}, nil).Maybe()
+	m.On("ResolveDirectAuthorizationTargets", mock.Anything, mock.Anything, mock.Anything).
+		Return(nil, nil, (*tidcommon.ServiceError)(nil)).Maybe()
 }
 
 func newOAuthAuthenticatedUser() providers.AuthUser {
@@ -899,4 +907,14 @@ func (suite *OAuthExecutorTestSuite) TestProcessAuthFlowResponse_PreventRegistra
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), providers.ExecComplete, execResp.Status)
 	suite.mockAuthnProvider.AssertExpectations(suite.T())
+}
+
+func (suite *OAuthExecutorTestSuite) TestProcessAuthFlowResponse_SyncsReturningUser() {
+	for _, tc := range federatedSignInSyncCases {
+		suite.Run(tc.name, func() {
+			suite.SetupTest()
+			runFederatedSignInSyncCase(suite.T(), tc, suite.mockAuthnProvider, suite.mockIDPService, suite.mockEntity,
+				suite.executor.ProcessAuthFlowResponse)
+		})
+	}
 }
