@@ -78,6 +78,14 @@ export interface ClientConfig {
   resource_identifier?: string;
 
   /**
+   * OAuth client ids of applications another component signs in with, such as a Data Plane's
+   * admin console. The Console keeps their OAuth 2 settings and credentials read-only and offers
+   * no way to delete or suspend them.
+   * @example ["ADMIN_CONSOLE"]
+   */
+  managed_client_ids?: string[];
+
+  /**
    * Server hostname or IP address
    * @example "localhost", "api.example.com", "192.168.1.100"
    */

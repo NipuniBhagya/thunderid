@@ -32,8 +32,8 @@ import {
   Dialog,
   DialogContent,
 } from '@wso2/oxygen-ui';
-import {ArrowLeft, Edit} from '@wso2/oxygen-ui-icons-react';
-import {useState, useCallback, useEffect, useMemo, useRef, type SyntheticEvent} from 'react';
+import {ArrowLeft, Edit, Lock} from '@wso2/oxygen-ui-icons-react';
+import {useState, useCallback, useEffect, useMemo, useRef, type ReactNode, type SyntheticEvent} from 'react';
 import {useTranslation} from 'react-i18next';
 import {Link, useLocation, useNavigate, useParams} from 'react-router';
 import useGetApplication from '../api/useGetApplication';
@@ -62,6 +62,7 @@ import getApplicationErrorMessage from '../utils/getApplicationErrorMessage';
 import getTemplateCapabilities from '../utils/getTemplateCapabilities';
 import getTemplateFieldConstraints from '../utils/getTemplateFieldConstraints';
 import getTemplateMetadata from '../utils/getTemplateMetadata';
+import isManagedClient from '../utils/isManagedClient';
 import isSystemConsoleClient from '../utils/isSystemConsoleClient';
 import isValidRedirectUriFormat from '../utils/isValidRedirectUriFormat';
 import {hasUserAccess} from '../utils/oauth2Rules';
@@ -375,6 +376,26 @@ export default function ApplicationEditPage() {
   // Suspending the Console's own client would lock every operator out, with nowhere to unsuspend it.
   const isConsoleClient = isSystemConsoleClient(oauth2Config?.clientId, config?.client?.client_id);
 
+  // Another component signs in with a managed client (e.g. a Data Plane's admin console), so changing
+  // its OAuth 2 settings or credentials, deleting it, or suspending it would lock that component out.
+  const storedClientId = application.inboundAuthConfig?.find((auth) => auth.type === 'oauth2')?.config?.clientId;
+  const isManagedApplication = isManagedClient(storedClientId, config?.client?.managed_client_ids);
+  const managedGatedApplication = isManagedApplication ? {...application, isReadOnly: true} : application;
+  const withManagedClientNotice = (panel: ReactNode): ReactNode =>
+    isManagedApplication ? (
+      <Box>
+        <Alert severity="info" icon={<Lock size={20} />} sx={{mb: 3}}>
+          {t(
+            'applications:edit.managedClientLock.message',
+            'Another component signs in with this application, so its OAuth 2 settings and credentials cannot be changed here.',
+          )}
+        </Alert>
+        {panel}
+      </Box>
+    ) : (
+      panel
+    );
+
   // User-facing tabs (Flows, Customization) and the general Access section only apply when the
   // client can act on behalf of a user. When it can't, they are frozen/hidden rather than removed.
   const userAccessUnlocked = !oauth2Config || hasUserAccess(oauth2Config.grantTypes);
@@ -446,7 +467,7 @@ export default function ApplicationEditPage() {
                 application={application}
                 oauth2Config={oauth2Config}
                 onFieldChange={handleFieldChange}
-                isReadOnly={application.isReadOnly === true}
+                isReadOnly={managedGatedApplication.isReadOnly === true}
                 onValidationChange={setMcpAccessInvalid}
                 sectionResetKey={sectionResetKey}
                 onGoToCredentials={isCimdClient ? undefined : () => setActiveTabKey('credentials')}
@@ -456,15 +477,15 @@ export default function ApplicationEditPage() {
           {
             key: 'credentials',
             label: t('applications:edit.page.tabs.credentials', 'Credentials'),
-            panel: (
+            panel: withManagedClientNotice(
               <EditCredentialsSettings
-                application={application}
+                application={managedGatedApplication}
                 editedApp={editedApp}
                 oauth2Config={oauth2Config}
                 onFieldChange={handleFieldChange}
                 showAttestation={false}
                 onValidationChange={setCredentialsSettingsInvalid}
-              />
+              />,
             ),
             // A metadata-document client's keys come from its document.
             hidden: isCimdClient,
@@ -513,9 +534,9 @@ export default function ApplicationEditPage() {
           {
             key: 'advanced',
             label: t('applications:edit.page.tabs.advanced'),
-            panel: (
+            panel: withManagedClientNotice(
               <EditAdvancedSettings
-                application={application}
+                application={managedGatedApplication}
                 editedApp={editedApp}
                 oauth2Config={oauth2Config}
                 // The backend rejects pkceRequired: true without the authorization_code grant, so
@@ -531,7 +552,7 @@ export default function ApplicationEditPage() {
                 onDeleteSuccess={() => {
                   handleBack().catch(() => null);
                 }}
-              />
+              />,
             ),
           },
         ] satisfies TabConfig[]
@@ -610,15 +631,15 @@ export default function ApplicationEditPage() {
               {
                 key: 'credentials',
                 label: t('applications:edit.page.tabs.credentials', 'Credentials'),
-                panel: (
+                panel: withManagedClientNotice(
                   <EditCredentialsSettings
-                    application={application}
+                    application={managedGatedApplication}
                     editedApp={editedApp}
                     oauth2Config={oauth2Config}
                     onFieldChange={handleFieldChange}
                     showAttestation={supportsAttestation}
                     onValidationChange={setCredentialsSettingsInvalid}
-                  />
+                  />,
                 ),
               },
             ]),
@@ -672,9 +693,9 @@ export default function ApplicationEditPage() {
         {
           key: 'advanced',
           label: t('applications:edit.page.tabs.advanced'),
-          panel: (
+          panel: withManagedClientNotice(
             <EditAdvancedSettings
-              application={application}
+              application={managedGatedApplication}
               editedApp={editedApp}
               oauth2Config={oauth2Config}
               oauth2Constraints={oauth2Constraints}
@@ -685,7 +706,7 @@ export default function ApplicationEditPage() {
               onDeleteSuccess={() => {
                 handleBack().catch(() => null);
               }}
-            />
+            />,
           ),
         },
       ]
@@ -858,7 +879,7 @@ export default function ApplicationEditPage() {
             })()}
         </PageTitle.SubHeader>
         {/* Read-only records too: the flows change only runtime state. */}
-        {!isConsoleClient && (
+        {!isConsoleClient && !isManagedApplication && (
           <PageTitle.Actions>
             <AccountStatusAction
               category="application"

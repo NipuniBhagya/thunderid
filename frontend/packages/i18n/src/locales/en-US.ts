@@ -3360,6 +3360,8 @@ const translations = {
     'edit.page.saving': 'Saving...',
     'edit.userAccessLock.message':
       'These settings apply only to user-facing flows. Enable a user-facing grant (e.g. authorization code) in the Advanced tab to configure them.',
+    'edit.managedClientLock.message':
+      'Another component signs in with this application, so its OAuth 2 settings and credentials cannot be changed here.',
 
     'edit.mcp.connect.sections.identity': 'Connection',
     'edit.mcp.connect.sections.identity.description': 'Client identity for connecting to MCP servers.',

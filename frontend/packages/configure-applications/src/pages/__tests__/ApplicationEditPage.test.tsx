@@ -741,6 +741,94 @@ describe('ApplicationEditPage', () => {
     });
   });
 
+  describe('Managed client', () => {
+    const MANAGED_CLIENT_NOTICE =
+      'Another component signs in with this application, so its OAuth 2 settings and credentials cannot be changed here.';
+    let originalRuntimeConfig: typeof window.__THUNDERID_RUNTIME_CONFIG__;
+
+    beforeEach(() => {
+      originalRuntimeConfig = window.__THUNDERID_RUNTIME_CONFIG__;
+      window.__THUNDERID_RUNTIME_CONFIG__ = {
+        brand: {
+          product_name: 'ThunderID',
+          favicon: {light: 'assets/images/favicon.ico', dark: 'assets/images/favicon-inverted.ico'},
+        },
+        client: {base: '/console', client_id: 'CONSOLE', managed_client_ids: ['ADMIN_CONSOLE']},
+        server: {hostname: 'localhost', port: 8090, http_only: false},
+      };
+    });
+
+    afterEach(() => {
+      window.__THUNDERID_RUNTIME_CONFIG__ = originalRuntimeConfig;
+    });
+
+    const renderWithClientId = (clientId: string): void => {
+      const [oauth2] = mockApplication.inboundAuthConfig ?? [];
+      mockUseGetApplication.mockReturnValue({
+        data: {...mockApplication, inboundAuthConfig: [{...oauth2, config: {...oauth2.config, clientId}}]},
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      } as unknown as UseQueryResult<Application>);
+      renderComponent();
+    };
+
+    const lastApplicationProp = (component: unknown): Application | undefined =>
+      (
+        vi.mocked(component as (props: {application: Application}) => null).mock.lastCall?.[0] as {
+          application: Application;
+        }
+      )?.application;
+
+    it('locks the Advanced tab of a managed client, ignoring case', async () => {
+      const user = userEvent.setup();
+      renderWithClientId('admin_console');
+
+      await mountSectionTab(user, 'Advanced', 'edit-advanced-settings');
+
+      expect(screen.getByText(MANAGED_CLIENT_NOTICE)).toBeInTheDocument();
+      expect(lastApplicationProp(EditAdvancedSettings)?.isReadOnly).toBe(true);
+    });
+
+    it('locks the Credentials tab of a managed client', async () => {
+      const user = userEvent.setup();
+      renderWithClientId('ADMIN_CONSOLE');
+
+      await mountSectionTab(user, 'Credentials', 'edit-credentials-settings');
+
+      expect(screen.getByText(MANAGED_CLIENT_NOTICE)).toBeInTheDocument();
+      expect(lastApplicationProp(EditCredentialsSettings)?.isReadOnly).toBe(true);
+    });
+
+    it('keeps the other tabs of a managed client editable', async () => {
+      const user = userEvent.setup();
+      renderWithClientId('ADMIN_CONSOLE');
+
+      await mountSectionTab(user, 'Access', 'edit-access-settings');
+
+      expect(screen.queryByText(MANAGED_CLIENT_NOTICE)).not.toBeInTheDocument();
+      expect(lastApplicationProp(EditAccessSettings)?.isReadOnly).toBeUndefined();
+    });
+
+    it('hides the lifecycle action on a managed client', () => {
+      renderWithClientId('ADMIN_CONSOLE');
+
+      expect(screen.queryByTestId('account-status-action')).not.toBeInTheDocument();
+    });
+
+    it('leaves a client that is not managed unlocked', async () => {
+      const user = userEvent.setup();
+      renderWithClientId('test-client-id');
+
+      await mountSectionTab(user, 'Advanced', 'edit-advanced-settings');
+
+      expect(screen.queryByText(MANAGED_CLIENT_NOTICE)).not.toBeInTheDocument();
+      expect(lastApplicationProp(EditAdvancedSettings)?.isReadOnly).toBeUndefined();
+      expect(screen.getByTestId('account-status-action')).toBeInTheDocument();
+    });
+  });
+
   describe('Tab Navigation', () => {
     it('should show the metadata document instead of credentials for a Client ID Metadata Document client', async () => {
       mockUseGetApplication.mockReturnValue({

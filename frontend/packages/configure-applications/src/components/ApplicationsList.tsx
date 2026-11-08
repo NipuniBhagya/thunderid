@@ -23,6 +23,7 @@ import useApplicationRoutes from '../hooks/useApplicationRoutes';
 import type {BasicApplication} from '../models/application';
 import getApplicationErrorMessage from '../utils/getApplicationErrorMessage';
 import getTemplateMetadata from '../utils/getTemplateMetadata';
+import isManagedClient from '../utils/isManagedClient';
 import isSystemConsoleClient from '../utils/isSystemConsoleClient';
 
 export default function ApplicationsList(): JSX.Element {
@@ -35,6 +36,7 @@ export default function ApplicationsList(): JSX.Element {
   const dataGridLocaleText = useDataGridLocaleText();
   const {data, isLoading, error, refetch} = useGetApplications();
   const consoleClientId = config?.client?.client_id;
+  const managedClientIds = config?.client?.managed_client_ids;
 
   // Resolves an error through the `applications` catalog. `t` defaults to the `common` namespace,
   // so this forwards explicit `ns:` prefixes unchanged and prefixes bare keys with `applications:`,
@@ -190,28 +192,30 @@ export default function ApplicationsList(): JSX.Element {
                     </IconButton>
                   </Tooltip>
                 )}
-                {can('app', 'delete') && !isSystemConsoleClient(params.row.clientId, consoleClientId) && (
-                  <Tooltip title={t('common:actions.delete', 'Delete')}>
-                    <IconButton
-                      aria-label={t('common:actions.delete', 'Delete')}
-                      size="small"
-                      color="error"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteClick(params.row.id);
-                      }}
-                    >
-                      <Trash2 size={16} />
-                    </IconButton>
-                  </Tooltip>
-                )}
+                {can('app', 'delete') &&
+                  !isSystemConsoleClient(params.row.clientId, consoleClientId) &&
+                  !isManagedClient(params.row.clientId, managedClientIds) && (
+                    <Tooltip title={t('common:actions.delete', 'Delete')}>
+                      <IconButton
+                        aria-label={t('common:actions.delete', 'Delete')}
+                        size="small"
+                        color="error"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteClick(params.row.id);
+                        }}
+                      >
+                        <Trash2 size={16} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
               </>
             )}
           </ListingTable.RowActions>
         ),
       },
     ],
-    [can, consoleClientId, deploys, handleDeleteClick, handleEditClick, t],
+    [can, consoleClientId, deploys, handleDeleteClick, handleEditClick, managedClientIds, t],
   );
 
   if (error) {

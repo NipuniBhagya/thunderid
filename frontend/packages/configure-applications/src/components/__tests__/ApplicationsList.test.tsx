@@ -351,6 +351,32 @@ describe('ApplicationsList', () => {
     });
   });
 
+  it('offers no Delete action on a managed client', () => {
+    const originalRuntimeConfig = window.__THUNDERID_RUNTIME_CONFIG__;
+    window.__THUNDERID_RUNTIME_CONFIG__ = {
+      brand: {
+        product_name: 'ThunderID',
+        favicon: {light: 'assets/images/favicon.ico', dark: 'assets/images/favicon-inverted.ico'},
+      },
+      client: {base: '/console', client_id: 'CONSOLE', managed_client_ids: ['CLIENT_ID_1']},
+      server: {hostname: 'localhost', port: 8090, http_only: false},
+    };
+
+    try {
+      vi.mocked(useGetApplications).mockReturnValue({
+        data: mockApplicationsData,
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useGetApplications>);
+
+      renderComponent();
+
+      expect(screen.getAllByRole('button', {name: /delete/i})).toHaveLength(1);
+    } finally {
+      window.__THUNDERID_RUNTIME_CONFIG__ = originalRuntimeConfig;
+    }
+  });
+
   it('should navigate when clicking row', async () => {
     const user = userEvent.setup();
 
