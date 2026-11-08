@@ -4,7 +4,9 @@
 import {render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {AllowedOriginTypes, createRow} from '@thunderid/configure-settings';
+import {FeaturesProvider, type FeaturesConfig} from '@thunderid/contexts';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
+import ApplicationFeatures from '../../../constants/application-features';
 import ApplicationCreateContext, {
   type ApplicationCreateContextType,
 } from '../../../contexts/ApplicationCreate/ApplicationCreateContext';
@@ -19,7 +21,10 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-const renderWithContext = (contextOverrides: Partial<ApplicationCreateContextType> = {}) => {
+const renderWithContext = (
+  contextOverrides: Partial<ApplicationCreateContextType> = {},
+  features: FeaturesConfig = {},
+) => {
   const baseContext: ApplicationCreateContextType = {
     currentStep: null as unknown as ApplicationCreateContextType['currentStep'],
     setCurrentStep: vi.fn(),
@@ -99,9 +104,11 @@ const renderWithContext = (contextOverrides: Partial<ApplicationCreateContextTyp
   };
 
   return render(
-    <ApplicationCreateContext.Provider value={baseContext}>
-      <ConfigureRedirectUris />
-    </ApplicationCreateContext.Provider>,
+    <FeaturesProvider features={features}>
+      <ApplicationCreateContext.Provider value={baseContext}>
+        <ConfigureRedirectUris />
+      </ApplicationCreateContext.Provider>
+    </FeaturesProvider>,
   );
 };
 
@@ -127,6 +134,20 @@ describe('ConfigureRedirectUris', () => {
     vi.clearAllMocks();
     translationLookup = (key: string): string => key;
     user = userEvent.setup();
+  });
+
+  it('does not render the dev server banner when the host turns the dev server quick add off', () => {
+    renderWithContext({selectedTemplateConfig: reactTemplate}, {[ApplicationFeatures.DEV_SERVER_QUICK_ADD]: false});
+
+    expect(screen.queryByTestId('application-dev-server-banner')).not.toBeInTheDocument();
+    expect(screen.queryByText('http://localhost:5173')).not.toBeInTheDocument();
+    expect(screen.getByText('applications:onboarding.configure.details.corsOrigins.title')).toBeInTheDocument();
+  });
+
+  it('renders the dev server banner when the host turns the dev server quick add on', () => {
+    renderWithContext({selectedTemplateConfig: nextJsTemplate}, {[ApplicationFeatures.DEV_SERVER_QUICK_ADD]: true});
+
+    expect(screen.getByTestId('application-dev-server-banner')).toBeInTheDocument();
   });
 
   it('does not render a dev server banner or CORS section for a template without either', () => {

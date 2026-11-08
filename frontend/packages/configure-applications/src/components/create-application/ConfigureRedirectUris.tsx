@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {AllowedOriginTypes, createRow, rowKey, type AllowedOriginDraftRow} from '@thunderid/configure-settings';
+import {useFeature} from '@thunderid/contexts';
 import {
   Alert,
   Box,
@@ -21,6 +22,7 @@ import {useEffect, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import CorsOriginsEditor from './CorsOriginsEditor';
 import DevServerLogo from './DevServerLogo';
+import ApplicationFeatures from '../../constants/application-features';
 import useApplicationCreate from '../../contexts/ApplicationCreate/useApplicationCreate';
 
 /** Pure URI-format check, permissive of path/host wildcards (the backend enforces wildcard rules). */
@@ -261,6 +263,7 @@ export default function ConfigureRedirectUris(): JSX.Element {
 
   const {devServer, capabilities} = selectedTemplateConfig ?? {};
   const showCors = Boolean(capabilities?.cors);
+  const isDevServerQuickAddEnabled = useFeature(ApplicationFeatures.DEV_SERVER_QUICK_ADD);
 
   // Post-logout redirect URIs default to mirroring the authorized redirect URIs, so admins don't
   // have to maintain two identical lists. Unchecking reveals a separate editor; re-checking
@@ -275,7 +278,7 @@ export default function ConfigureRedirectUris(): JSX.Element {
 
   return (
     <Stack direction="column" spacing={4} data-testid="application-configure-redirect-uris">
-      {devServer && (
+      {devServer && isDevServerQuickAddEnabled && (
         <DevServerBanner
           devServer={devServer}
           showCors={showCors}
