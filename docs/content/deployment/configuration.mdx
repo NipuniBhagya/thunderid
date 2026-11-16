@@ -1190,6 +1190,56 @@ A `PUT` replaces the entire runtime layer, so include every runtime value you wa
 Directive names must match the pattern `^[a-z][a-z0-9-]*$`, and no source may contain whitespace, a semicolon, or a comma. An invalid value is rejected with `SCF-1003` ("Invalid server configuration value").
 :::
 
+## Console Documentation Source
+
+The <ProductName /> Console links to the documentation site from its pages. It also reads two kinds of content from that site in the browser, for the **Overview** tab of an application:
+
+- The integration guide, which the Console shows as steps with the application's own values in the code samples.
+- The coding agent prompt, which the Console copies to the clipboard.
+
+Set the site in the Console's runtime configuration (`apps/console/config.js`):
+
+```javascript
+window.__THUNDERID_RUNTIME_CONFIG__ = {
+  // ...
+  documentation: {
+    baseUrl: 'https://docs.example.com/docs',
+    links: {
+      'applications.templates.react.docs': 'getting-started/connect-your-application/react/',
+      'applications.templates.react.llmPrompt.redirectBased':
+        'getting-started/connect-your-application/prompts/react/redirect-based.txt',
+    },
+  },
+};
+```
+
+| Field | Description |
+|-------|-------------|
+| `baseUrl` | Base URL of the documentation site. |
+| `links` | Map of a link key to a path under `baseUrl`, or to an absolute URL that is used as written. The Console hides the link, guide, or prompt of a key that has no value. |
+
+### Host the Documentation Site Yourself
+
+To use a copy of the documentation that you host, set `baseUrl` to it. The Console reads the guide and the prompt from a different origin than its own, so your host must meet these requirements:
+
+- **Serve the Markdown export of each quickstart page.** The Console reads a page's guide from the page URL with `.md` in place of the trailing slash. For example, it reads the guide of `getting-started/connect-your-application/react/` from `getting-started/connect-your-application/react.md`. The documentation build writes a `.md` file for every page.
+- **Serve the prompt files.** These are the `.txt` files that the `llmPrompt` keys in `links` point to. The documentation build copies them next to the pages.
+- **Send the `Access-Control-Allow-Origin` header on those files.** Without it, the browser blocks the Console from reading them. Send the header on `304 Not Modified` responses as well.
+
+The following nginx location sends the header on every response for a site served under `/docs/`:
+
+```nginx
+location /docs/ {
+    add_header Access-Control-Allow-Origin "*" always;
+}
+```
+
+When the Console cannot read a guide, it shows an error in the guide dialog and keeps the link that opens the page on the documentation site.
+
+:::note
+An enforced [Content Security Policy](#content-security-policy) blocks these requests, because the baseline `connect-src` allows only `'self'`. This applies to the default documentation site as well. When you set `reportOnly` to `false`, add the origin of the documentation site to `connect-src` for the `/console/` path, and keep `'self'` in the list.
+:::
+
 ## Default Resource Server
 
 Sets the resource server for permission-bearing token requests that omit the `resource` parameter. It is stored in the server-config `defaultResourceServer` section, not in `deployment.yaml`. When no default is configured, a request that contains permission scopes but omits `resource` fails with `invalid_target`. OIDC-only and scopeless requests are not bound to a resource server, so they use the application's default audience (`token.accessToken.defaultAudience`), or the `client_id` when it is unset.
