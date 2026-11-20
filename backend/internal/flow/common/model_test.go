@@ -366,6 +366,60 @@ func (s *ModelTestSuite) TestParseExtensionProperties_RefusesUnusableValues() {
 	}
 }
 
+func (s *ModelTestSuite) TestParseExtensionProperties_ReadsOutputs() {
+	props, invalid := ParseExtensionProperties(map[string]interface{}{
+		NodePropertyConnectionID: "conn-1",
+		NodePropertyResponseKeys: []interface{}{"age", "riskScore"},
+		NodePropertyOutputs: map[string]interface{}{
+			"age":       map[string]interface{}{"display": " User age ", "comparator": "number", "sensitivity": "pii"},
+			"riskScore": map[string]interface{}{},
+		},
+	})
+
+	s.Empty(invalid)
+	s.Equal(map[string]ExtensionOutput{
+		"age":       {Display: "User age", Comparator: "number", Sensitivity: "pii"},
+		"riskScore": {},
+	}, props.Outputs)
+}
+
+func (s *ModelTestSuite) TestParseExtensionProperties_OutputsAreOptional() {
+	props, invalid := ParseExtensionProperties(map[string]interface{}{
+		NodePropertyConnectionID: "conn-1", NodePropertyResponseKeys: []interface{}{"age"}, NodePropertyOutputs: nil,
+	})
+
+	s.Empty(invalid)
+	s.Nil(props.Outputs)
+}
+
+func (s *ModelTestSuite) TestParseExtensionProperties_RefusesUnusableOutputs() {
+	cases := []struct {
+		name         string
+		responseKeys interface{}
+		outputs      interface{}
+	}{
+		{"not an object", []interface{}{"age"}, []interface{}{"age"}},
+		{"empty", []interface{}{"age"}, map[string]interface{}{}},
+		{"field not stored", []interface{}{"age"}, map[string]interface{}{"score": map[string]interface{}{}}},
+		{"no response keys", nil, map[string]interface{}{"age": map[string]interface{}{}}},
+		{"entry not an object", []interface{}{"age"}, map[string]interface{}{"age": "number"}},
+		{"unknown entry field", []interface{}{"age"},
+			map[string]interface{}{"age": map[string]interface{}{"type": "number"}}},
+		{"entry field not a string", []interface{}{"age"},
+			map[string]interface{}{"age": map[string]interface{}{"comparator": 1}}},
+	}
+	for _, tc := range cases {
+		s.Run(tc.name, func() {
+			_, invalid := ParseExtensionProperties(map[string]interface{}{
+				NodePropertyConnectionID: "conn-1", NodePropertyResponseKeys: tc.responseKeys,
+				NodePropertyOutputs: tc.outputs,
+			})
+
+			s.Equal(NodePropertyOutputs, invalid)
+		})
+	}
+}
+
 func (s *ModelTestSuite) TestParseExtensionProperties_MaxAttemptsBounds() {
 	for _, value := range []interface{}{1, 20, float64(20), int64(7)} {
 		props, invalid := ParseExtensionProperties(map[string]interface{}{

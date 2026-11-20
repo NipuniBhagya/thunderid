@@ -18,6 +18,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/entityprovider"
 	"github.com/thunder-id/thunderid/internal/flow/common"
 	"github.com/thunder-id/thunderid/internal/flow/core"
+	"github.com/thunder-id/thunderid/internal/flow/executormeta"
 	"github.com/thunder-id/thunderid/internal/system/jose/jwt"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/utils"
@@ -74,6 +75,7 @@ func newMagicLinkExecutor(
 				{Property: propertyKeyTokenExpiry},
 				{Property: propertyKeyMagicLinkURL},
 			},
+			Outputs: executormeta.AuthenticatesUser(ExecutorModeVerify),
 		})
 
 	return &magicLinkExecutor{

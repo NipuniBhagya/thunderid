@@ -30,11 +30,15 @@ type compiler struct {
 	diagnostics []Diagnostic
 	plan        *plan
 	ruleSlots   map[int]bool
+	// trees holds each rule's normalised condition, nil for a rule without one, and lowered each
+	// compiled leaf by path, for the lints that read them after compilation.
+	trees   []*tree
+	lowered map[string]*leaf
 }
 
 // newCompiler creates a compiler that resolves signals through catalog.
 func newCompiler(catalog SignalCatalogInterface) *compiler {
-	return &compiler{catalog: catalog, plan: &plan{slotIndex: map[string]int{}}}
+	return &compiler{catalog: catalog, plan: &plan{slotIndex: map[string]int{}}, lowered: map[string]*leaf{}}
 }
 
 // compile builds the plan, or returns nil when any diagnostic has severity ERROR.
@@ -59,11 +63,13 @@ func (c *compiler) rule(path string, r *Rule) {
 	whenPath := join(path, fieldWhen)
 	if r.When == nil {
 		c.add(whenPath, CodeMissingField, map[string]string{paramField: fieldWhen})
+		c.trees = append(c.trees, nil)
 		return
 	}
 	c.ruleSlots = map[int]bool{}
 	t := c.normalise(r.When, whenPath)
 	c.measure(t)
+	c.trees = append(c.trees, t)
 	eval := c.generate(t)
 	c.plan.rules = append(c.plan.rules, compiledRule{
 		id: r.ID, nextNode: r.NextNode, eval: eval, slots: slices.Sorted(maps.Keys(c.ruleSlots)),
@@ -145,6 +151,7 @@ func (c *compiler) generate(t *tree) node {
 	if l == nil {
 		return nil
 	}
+	c.lowered[t.path] = l
 	return l.evaluate
 }
 

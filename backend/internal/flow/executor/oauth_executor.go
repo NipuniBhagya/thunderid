@@ -17,6 +17,7 @@ import (
 	authnprovidercm "github.com/thunder-id/thunderid/internal/authnprovider/common"
 	"github.com/thunder-id/thunderid/internal/flow/common"
 	"github.com/thunder-id/thunderid/internal/flow/core"
+	"github.com/thunder-id/thunderid/internal/flow/executormeta"
 	oauth2const "github.com/thunder-id/thunderid/internal/oauth/oauth2/constants"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	systemutils "github.com/thunder-id/thunderid/internal/system/utils"
@@ -88,6 +89,7 @@ func newOAuthExecutor(
 				{Property: common.NodePropertyAllowAuthenticationWithoutLocalUser},
 				{Property: common.NodePropertyAllowRegistrationWithExistingUser},
 			},
+			Outputs: executormeta.AuthenticatesUser(),
 		})
 
 	return &oAuthExecutor{

@@ -33,3 +33,19 @@ func orTruth(a, b Truth) Truth {
 func notTruth(a Truth) Truth {
 	return TruthTrue - a
 }
+
+// String returns the name of the cost class: local, store or remote.
+func (c CostClass) String() string {
+	switch c {
+	case CostLocal:
+		return costLocal
+	case CostStore:
+		return costStore
+	}
+	return costRemote
+}
+
+// MarshalText encodes the cost class as its name.
+func (c CostClass) MarshalText() ([]byte, error) {
+	return []byte(c.String()), nil
+}

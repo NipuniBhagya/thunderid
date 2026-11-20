@@ -10,6 +10,7 @@ import (
 	authnprovidercm "github.com/thunder-id/thunderid/internal/authnprovider/common"
 	"github.com/thunder-id/thunderid/internal/flow/common"
 	"github.com/thunder-id/thunderid/internal/flow/core"
+	"github.com/thunder-id/thunderid/internal/flow/executormeta"
 	"github.com/thunder-id/thunderid/internal/flow/session"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
@@ -37,6 +38,7 @@ func newSSOCheckExecutor(flowFactory core.FlowFactoryInterface, sso session.Serv
 			SupportedProperties: []providers.ExecutorSupportedProperties{
 				{Property: common.NodePropertyCheckpointRef, IsRequired: true},
 			},
+			Outputs: append(executormeta.AuthenticatesUser(), executormeta.RecordsSessionAuthTime()),
 		})
 
 	return &ssoCheckExecutor{

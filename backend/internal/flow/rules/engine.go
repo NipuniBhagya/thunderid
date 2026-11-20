@@ -12,6 +12,9 @@ type EngineInterface interface {
 	Compile(d *Decision, catalog SignalCatalogInterface) (PlanInterface, []Diagnostic)
 	Operators() []OperatorDescriptor
 	Comparators() []ComparatorDescriptor
+	Signals(scope SignalScope) (SignalRegistryInterface, []Diagnostic)
+	Availability(graph FlowGraph) AvailabilityInterface
+	Validate(raw []byte, vc ValidationContext) (*Decision, PlanInterface, []Diagnostic)
 }
 
 // limits bounds the size of a decision block.
@@ -95,4 +98,16 @@ func (e *ruleEngine) Comparators() []ComparatorDescriptor {
 		descriptors = append(descriptors, d)
 	}
 	return descriptors
+}
+
+// Signals builds the signals a decision node in the scope can use, and reports problems with the
+// outputs property of the scope's extension steps.
+func (e *ruleEngine) Signals(scope SignalScope) (SignalRegistryInterface, []Diagnostic) {
+	r := newSignalRegistry(scope)
+	return r, r.diagnostics
+}
+
+// Availability analyses which signals exist at each node of a flow graph.
+func (e *ruleEngine) Availability(graph FlowGraph) AvailabilityInterface {
+	return analyseAvailability(graph)
 }

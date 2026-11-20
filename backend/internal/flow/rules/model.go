@@ -160,20 +160,115 @@ type DecisionSource struct {
 	FrontendVersion int    `json:"frontendVersion,omitempty"`
 }
 
-// Diagnostic is one problem found in a decision block.
+// Diagnostic is one problem found in a decision block, or in a step whose outputs decision rules read.
+// NodeID names the node the path is relative to, when the problem was found in the context of a flow.
 type Diagnostic struct {
+	NodeID   string            `json:"nodeId,omitempty"`
 	Path     string            `json:"path"`
 	Code     DiagnosticCode    `json:"code"`
 	Severity Severity          `json:"severity"`
 	Params   map[string]string `json:"params,omitempty"`
 }
 
-// SignalSpec is what the compiler needs to know about a signal.
+// SignalCategory groups signals in the signal picker.
+type SignalCategory string
+
+// Signal categories.
+const (
+	// SignalCategoryApplication is the flow and the application that started it.
+	SignalCategoryApplication SignalCategory = "APPLICATION"
+	// SignalCategoryUser is the identified user, as the directory holds them.
+	SignalCategoryUser SignalCategory = "USER"
+	// SignalCategoryUserCollected is what the user entered during the flow.
+	SignalCategoryUserCollected SignalCategory = "USER_COLLECTED"
+	// SignalCategoryRuntime is what earlier steps of the flow worked out, such as an extension's answer.
+	SignalCategoryRuntime SignalCategory = "RUNTIME"
+	// SignalCategoryRequest is the HTTP request.
+	SignalCategoryRequest SignalCategory = "REQUEST"
+	// SignalCategorySession is the user's single sign-on session.
+	SignalCategorySession SignalCategory = "SESSION"
+)
+
+// SignalLayer is where a signal is declared.
+type SignalLayer string
+
+// Signal layers.
+const (
+	// SignalLayerBuiltIn is declared in server code and exists in every flow.
+	SignalLayerBuiltIn SignalLayer = "BUILT_IN"
+	// SignalLayerSchema is generated from the user type schemas of the flow's organization unit.
+	SignalLayerSchema SignalLayer = "SCHEMA"
+	// SignalLayerFlow is generated from the inputs and extension steps of one flow.
+	SignalLayerFlow SignalLayer = "FLOW"
+)
+
+// Trust says who controls a signal's value.
+type Trust string
+
+// Trust levels.
+const (
+	// TrustSystem is a value the platform establishes.
+	TrustSystem Trust = "system"
+	// TrustDirectory is a value the directory holds for the user.
+	TrustDirectory Trust = "directory"
+	// TrustExternal is a value an organization's service returned.
+	TrustExternal Trust = "external"
+	// TrustSubject is a value the user typed or the client sent.
+	TrustSubject Trust = "subject"
+)
+
+// Sensitivity says how carefully a signal's value is handled.
+type Sensitivity string
+
+// Sensitivities.
+const (
+	// SensitivityPublic is a value that is not confidential.
+	SensitivityPublic Sensitivity = "public"
+	// SensitivityInternal is a value that stays inside the deployment.
+	SensitivityInternal Sensitivity = "internal"
+	// SensitivityPII is personal data.
+	SensitivityPII Sensitivity = "pii"
+)
+
+// Producer says what makes a signal's value exist.
+type Producer string
+
+// Producers.
+const (
+	// ProducerAlways is a value that exists in every flow execution.
+	ProducerAlways Producer = "ALWAYS"
+	// ProducerExecutor is a value an executor produces when it completes.
+	ProducerExecutor Producer = "EXECUTOR"
+	// ProducerInput is a value the user enters at a prompt.
+	ProducerInput Producer = "INPUT"
+	// ProducerExtension is a field of an extension step's answer.
+	ProducerExtension Producer = "EXTENSION"
+)
+
+// SignalSpec declares a signal: what it is, how its values are compared, how expensive it is to fetch,
+// who controls it and what makes it exist.
 type SignalSpec struct {
-	Name       string
-	Comparator ComparatorName
-	Scale      []string
-	CostClass  CostClass
+	Name        string         `json:"name"`
+	Display     string         `json:"display,omitempty"`
+	Description string         `json:"description,omitempty"`
+	Category    SignalCategory `json:"category,omitempty"`
+	Layer       SignalLayer    `json:"layer,omitempty"`
+	Comparator  ComparatorName `json:"comparator,omitempty"`
+	Scale       []string       `json:"scale,omitempty"`
+	Multi       bool           `json:"multi"`
+	CostClass   CostClass      `json:"costClass"`
+	Trust       Trust          `json:"trust,omitempty"`
+	Sensitivity Sensitivity    `json:"sensitivity,omitempty"`
+	FlowTypes   []string       `json:"flowTypes,omitempty"`
+	ProducedBy  Producer       `json:"producedBy,omitempty"`
+	// With names the signal this one exists alongside: the user's groups exist wherever the user does.
+	With string `json:"with,omitempty"`
+	// AccountData marks a signal read from the identified account, which a rule should use only after
+	// the user has authenticated.
+	AccountData bool `json:"accountData,omitempty"`
+	// Family marks a template whose name is a prefix: every name that extends it with a valid suffix,
+	// such as a header name, is a member.
+	Family bool `json:"family,omitempty"`
 }
 
 // Outcome is the result of evaluating a decision.

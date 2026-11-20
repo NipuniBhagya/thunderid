@@ -12,6 +12,7 @@ import (
 	authnprovidercm "github.com/thunder-id/thunderid/internal/authnprovider/common"
 	"github.com/thunder-id/thunderid/internal/flow/common"
 	"github.com/thunder-id/thunderid/internal/flow/core"
+	"github.com/thunder-id/thunderid/internal/flow/executormeta"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
@@ -42,6 +43,7 @@ func newOpenID4VPVerifier(
 				{Property: propertyKeyPresentationDefinitionID, IsRequired: true},
 				{Property: common.NodePropertyAllowAuthenticationWithoutLocalUser},
 			},
+			Outputs: executormeta.AuthenticatesUser(),
 		},
 	)
 	return &openid4vpVerifier{

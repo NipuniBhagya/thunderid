@@ -124,6 +124,30 @@ const (
 	CodeIncomparableLiteral DiagnosticCode = "W_INCOMPARABLE_LITERAL"
 	// CodeOperatorComparator reports an operator whose needs the signal's declared comparator cannot meet.
 	CodeOperatorComparator DiagnosticCode = "W_OPERATOR_COMPARATOR"
+	// CodeOutputName reports a rule that uses an extension step's field whose node ID or field name does
+	// not form a valid signal name.
+	CodeOutputName DiagnosticCode = "E_OUTPUT_NAME"
+	// CodeOutputNotStored reports an outputs entry for a field the extension step does not store.
+	CodeOutputNotStored DiagnosticCode = "E_OUTPUT_NOT_STORED"
+	// CodeOutputDeclaration reports an outputs entry that names a comparator or sensitivity that does
+	// not exist.
+	CodeOutputDeclaration DiagnosticCode = "E_OUTPUT_DECLARATION"
+	// CodeSignalUnavailable reports a signal that exists on no path into the decision node.
+	CodeSignalUnavailable DiagnosticCode = "E_SIGNAL_UNAVAILABLE"
+	// CodeSignalSometimesAbsent reports a signal that exists on some paths into the node only; on the
+	// others the rule is unknown and the unknown arm decides.
+	CodeSignalSometimesAbsent DiagnosticCode = "W_SIGNAL_SOMETIMES_ABSENT"
+	// CodeUnauthenticatedUser reports a rule that reads the identified account's directory data where
+	// the user has not authenticated on every path into the node.
+	CodeUnauthenticatedUser DiagnosticCode = "W_UNAUTHENTICATED_USER"
+	// CodeSubjectTrust reports a rule whose condition reads only values the user or the client supplied.
+	CodeSubjectTrust DiagnosticCode = "W_SUBJECT_TRUST"
+	// CodeNeverTrue reports a rule whose condition can never be true.
+	CodeNeverTrue DiagnosticCode = "W_NEVER_TRUE"
+	// CodeShadowedRule reports a rule that can never decide, because an earlier rule always does.
+	CodeShadowedRule DiagnosticCode = "W_SHADOWED_RULE"
+	// CodeTestFailed reports a node test whose outcome differs from what it expects.
+	CodeTestFailed DiagnosticCode = "E_TEST_FAILED"
 )
 
 // Diagnostic parameter names.
@@ -133,6 +157,8 @@ const (
 	paramLimit    = "limit"
 	paramName     = "name"
 	paramValue    = "value"
+	paramActual   = "actual"
+	paramRuleID   = "ruleId"
 )
 
 // Expected JSON types, used as diagnostic parameters.
@@ -143,4 +169,76 @@ const (
 	typeInteger = "integer"
 	typeBoolean = "boolean"
 	typeLiteral = "string, number, boolean or a non-empty list of them"
+)
+
+// Names of the cost classes, as clients see them.
+const (
+	costLocal  = "local"
+	costStore  = "store"
+	costRemote = "remote"
+)
+
+// Built-in signals and signal families.
+const (
+	signalFlowType        = "flow.type"
+	signalApplicationID   = "application.id"
+	signalApplicationName = "application.name"
+	signalApplicationType = "application.type"
+	signalApplicationOUID = "application.ouId"
+	// SignalUserID is the identified user. Executors declare it when they identify or authenticate one.
+	SignalUserID = "user.id"
+	// SignalUserAuthenticated is true once the identified user has authenticated. Executors declare it
+	// when they verify a credential, a federated login or an existing session.
+	SignalUserAuthenticated = "user.authenticated"
+	signalUserOUID          = "user.ouId"
+	signalUserType          = "user.type"
+	signalUserGroups        = "user.groups"
+	// SignalSessionAuthTime is when the user of the session last authenticated.
+	SignalSessionAuthTime = "session.authTime"
+	familyRequestHeader   = "request.header."
+	familyRequestQuery    = "request.query."
+	familyInitialHeader   = "request.initial.header."
+	familyInitialQuery    = "request.initial.query."
+)
+
+// Prefixes of generated signals, and the separator inside signal names.
+const (
+	prefixUser      = "user."
+	prefixInput     = "input."
+	prefixExtension = "extension."
+	nameSeparator   = "."
+)
+
+// Bounds on the parts of a generated or family signal name.
+const (
+	maxNameSegmentLength  = 128
+	maxFamilySuffixLength = 256
+)
+
+// Types of user type schema attributes that become signals.
+const (
+	schemaTypeString  = "string"
+	schemaTypeEmail   = "email"
+	schemaTypeMobile  = "mobile"
+	schemaTypeNumber  = "number"
+	schemaTypeBoolean = "boolean"
+	schemaTypeArray   = "array"
+)
+
+// Prompt input types the signal registry treats specially. They match the input types of the flow
+// definition.
+const (
+	inputTypeNumber   = "NUMBER_INPUT"
+	inputTypeEmail    = "EMAIL_INPUT"
+	inputTypePhone    = "PHONE_INPUT"
+	inputTypePassword = "PASSWORD_INPUT"
+	inputTypeOTP      = "OTP_INPUT"
+)
+
+// Paths of an extension step's outputs, for diagnostics about them.
+const (
+	fieldProperties  = "properties"
+	fieldOutputs     = "outputs"
+	fieldComparator  = "comparator"
+	fieldSensitivity = "sensitivity"
 )

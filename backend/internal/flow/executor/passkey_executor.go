@@ -14,6 +14,7 @@ import (
 
 	"github.com/thunder-id/thunderid/internal/authn/passkey"
 	"github.com/thunder-id/thunderid/internal/flow/core"
+	"github.com/thunder-id/thunderid/internal/flow/executormeta"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	systemutils "github.com/thunder-id/thunderid/internal/system/utils"
 )
@@ -118,6 +119,7 @@ func newPasskeyAuthExecutor(
 				{Property: "authenticatorSelection"},
 				{Property: "attestation"},
 			},
+			Outputs: executormeta.AuthenticatesUser(passkeyExecutorModeVerify),
 		})
 
 	return &passkeyAuthExecutor{

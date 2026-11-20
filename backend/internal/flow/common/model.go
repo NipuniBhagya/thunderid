@@ -6,6 +6,7 @@ package common
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	authnprovidercm "github.com/thunder-id/thunderid/internal/authnprovider/common"
@@ -41,6 +42,17 @@ type ExtensionProperties struct {
 	RuntimeDataKeys []string
 	ResponseKeys    []string
 	MaxAttempts     int
+	// Outputs describes, by field name, response fields that decision rules read. Every key is one of
+	// ResponseKeys. It is metadata for rules only: the executor stores the same fields either way.
+	Outputs map[string]ExtensionOutput
+}
+
+// ExtensionOutput describes one stored response field of an extension step to the rules that read it.
+// The values are checked by the rule engine, which owns the comparator and sensitivity names.
+type ExtensionOutput struct {
+	Display     string
+	Comparator  string
+	Sensitivity string
 }
 
 // ParseExtensionProperties reads an extension step's node properties, applying the defaults, and
@@ -64,6 +76,9 @@ func ParseExtensionProperties(properties map[string]interface{}) (ExtensionPrope
 	}
 	if props.MaxAttempts, ok = extensionMaxAttemptsValue(properties[NodePropertyMaxAttempts]); !ok {
 		return props, NodePropertyMaxAttempts
+	}
+	if props.Outputs, ok = extensionOutputs(properties[NodePropertyOutputs], props.ResponseKeys); !ok {
+		return props, NodePropertyOutputs
 	}
 	return props, ""
 }
@@ -118,6 +133,57 @@ func extensionRuntimeDataKeys(value interface{}) ([]string, bool) {
 		}
 	}
 	return keys, true
+}
+
+// extensionOutputs reads the outputs property: an object keyed by response field, each entry an object
+// with optional string display, comparator and sensitivity. nil is unset. A field that is not one of
+// responseKeys is unusable, because the step would never store it, as is an empty object.
+func extensionOutputs(value interface{}, responseKeys []string) (map[string]ExtensionOutput, bool) {
+	if value == nil {
+		return nil, true
+	}
+	entries, ok := value.(map[string]interface{})
+	if !ok || len(entries) == 0 {
+		return nil, false
+	}
+	outputs := make(map[string]ExtensionOutput, len(entries))
+	for field, raw := range entries {
+		if !slices.Contains(responseKeys, field) {
+			return nil, false
+		}
+		output, valid := extensionOutput(raw)
+		if !valid {
+			return nil, false
+		}
+		outputs[field] = output
+	}
+	return outputs, true
+}
+
+// extensionOutput reads one entry of the outputs property, refusing fields it does not define.
+func extensionOutput(value interface{}) (ExtensionOutput, bool) {
+	var output ExtensionOutput
+	entry, ok := value.(map[string]interface{})
+	if !ok {
+		return output, false
+	}
+	for name, raw := range entry {
+		text, isString := raw.(string)
+		if !isString {
+			return output, false
+		}
+		switch name {
+		case extensionOutputDisplay:
+			output.Display = strings.TrimSpace(text)
+		case extensionOutputComparator:
+			output.Comparator = strings.TrimSpace(text)
+		case extensionOutputSensitivity:
+			output.Sensitivity = strings.TrimSpace(text)
+		default:
+			return output, false
+		}
+	}
+	return output, true
 }
 
 // extensionMaxAttemptsValue reads maxAttempts as a whole number within its bounds. nil is the default.

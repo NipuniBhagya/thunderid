@@ -45,7 +45,9 @@ var catalog = map[string]providers.ExecutorMeta{
 		},
 	},
 	ExecutorNameCredentialSetter: {},
-	ExecutorNameCredentialsAuth:  {},
+	ExecutorNameCredentialsAuth: {
+		Outputs: AuthenticatesUser(),
+	},
 	ExecutorNameDeviceCode: {
 		SupportedFlowTypes: []providers.FlowType{providers.FlowTypeDeviceGrant},
 	},
@@ -69,6 +71,7 @@ var catalog = map[string]providers.ExecutorMeta{
 			{Property: "runtimeDataKeys"},
 			{Property: "responseKeys"},
 			{Property: "maxAttempts"},
+			{Property: "outputs"},
 		},
 	},
 	ExecutorNameGitHubAuth: {
@@ -77,6 +80,7 @@ var catalog = map[string]providers.ExecutorMeta{
 			{Property: "allowAuthenticationWithoutLocalUser"},
 			{Property: "allowRegistrationWithExistingUser"},
 		},
+		Outputs: AuthenticatesUser(),
 	},
 	ExecutorNameGoogleAuth: {
 		SupportedProperties: []providers.ExecutorSupportedProperties{
@@ -84,6 +88,7 @@ var catalog = map[string]providers.ExecutorMeta{
 			{Property: "allowAuthenticationWithoutLocalUser"},
 			{Property: "allowRegistrationWithExistingUser"},
 		},
+		Outputs: AuthenticatesUser(),
 	},
 	ExecutorNameHTTPRequest: {
 		SupportedProperties: []providers.ExecutorSupportedProperties{
@@ -104,6 +109,7 @@ var catalog = map[string]providers.ExecutorMeta{
 			{Property: "boundToUserType"},
 			{Property: "continueOnNoMatch"},
 		},
+		Outputs: IdentifiesUser(ExecutorModeIdentify, ExecutorModeResolve),
 	},
 	ExecutorNameIdentityGovernance: {
 		SupportedModes:     []string{ExecutorModeUnlock, ExecutorModeSuspend, ExecutorModeUnsuspend},
@@ -121,6 +127,7 @@ var catalog = map[string]providers.ExecutorMeta{
 			{Property: "tokenExpiry"},
 			{Property: "magicLinkURL"},
 		},
+		Outputs: AuthenticatesUser(ExecutorModeVerify),
 	},
 	ExecutorNameOAuth: {
 		SupportedProperties: []providers.ExecutorSupportedProperties{
@@ -128,6 +135,7 @@ var catalog = map[string]providers.ExecutorMeta{
 			{Property: "allowAuthenticationWithoutLocalUser"},
 			{Property: "allowRegistrationWithExistingUser"},
 		},
+		Outputs: AuthenticatesUser(),
 	},
 	ExecutorNameOIDCAuth: {
 		SupportedProperties: []providers.ExecutorSupportedProperties{
@@ -135,6 +143,7 @@ var catalog = map[string]providers.ExecutorMeta{
 			{Property: "allowAuthenticationWithoutLocalUser"},
 			{Property: "allowRegistrationWithExistingUser"},
 		},
+		Outputs: AuthenticatesUser(),
 	},
 	ExecutorNameOTPExecutor: {
 		SupportedModes: []string{"generate", "verify"},
@@ -144,6 +153,7 @@ var catalog = map[string]providers.ExecutorMeta{
 			{Property: "otpUseNumericOnly"},
 			{Property: "otpValidityPeriodSeconds"},
 		},
+		Outputs: AuthenticatesUser(ExecutorModeVerify),
 	},
 	ExecutorNameOUCreation: {
 		SupportedProperties: []providers.ExecutorSupportedProperties{
@@ -163,6 +173,7 @@ var catalog = map[string]providers.ExecutorMeta{
 			{Property: "presentation_definition_id", IsRequired: true},
 			{Property: "allowAuthenticationWithoutLocalUser"},
 		},
+		Outputs: AuthenticatesUser(),
 	},
 	ExecutorNamePasskeyAuth: {
 		SupportedModes: []string{"challenge", "verify", "register_start", "register_finish"},
@@ -172,6 +183,7 @@ var catalog = map[string]providers.ExecutorMeta{
 			{Property: "authenticatorSelection"},
 			{Property: "attestation"},
 		},
+		Outputs: AuthenticatesUser(ExecutorModeVerify),
 	},
 	ExecutorNamePermissionValidator: {
 		SupportedProperties: []providers.ExecutorSupportedProperties{
@@ -202,6 +214,7 @@ var catalog = map[string]providers.ExecutorMeta{
 			{Property: "allowCrossOUProvisioning"},
 			{Property: "provisioningOU"},
 		},
+		Outputs: IdentifiesUser(),
 	},
 	ExecutorNameSMSExecutor: {
 		SupportedProperties: []providers.ExecutorSupportedProperties{
@@ -214,9 +227,11 @@ var catalog = map[string]providers.ExecutorMeta{
 		SupportedProperties: []providers.ExecutorSupportedProperties{
 			{Property: "checkpointRef", IsRequired: true},
 		},
+		Outputs: append(AuthenticatesUser(), RecordsSessionAuthTime()),
 	},
 	ExecutorNameSession: {
 		SupportedFlowTypes: []providers.FlowType{"AUTHENTICATION"},
+		Outputs:            []providers.ExecutorOutput{RecordsSessionAuthTime()},
 	},
 	ExecutorNameSessionRevocation: {
 		SupportedFlowTypes: []providers.FlowType{"ADMINISTRATION", "SYSTEM"},
@@ -287,6 +302,10 @@ func cloneMeta(meta providers.ExecutorMeta) providers.ExecutorMeta {
 	meta.SupportedProperties = slices.Clone(meta.SupportedProperties)
 	for i := range meta.SupportedProperties {
 		meta.SupportedProperties[i].ApplicableModes = slices.Clone(meta.SupportedProperties[i].ApplicableModes)
+	}
+	meta.Outputs = slices.Clone(meta.Outputs)
+	for i := range meta.Outputs {
+		meta.Outputs[i].Modes = slices.Clone(meta.Outputs[i].Modes)
 	}
 	return meta
 }

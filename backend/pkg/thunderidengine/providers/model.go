@@ -1489,6 +1489,18 @@ type ExecutorSupportedProperties struct {
 	ApplicableModes []string `json:"applicableModes,omitempty"`
 }
 
+// ExecutorOutput declares a signal that exists after an executor finishes with a given status, for the
+// signal availability analysis of decision nodes. It describes what the executor does; nothing reads
+// the value through it.
+type ExecutorOutput struct {
+	// Signal is the name of the signal, for example "user.id" or "session.authTime".
+	Signal string `json:"signal"`
+	// OnStatus is the status on which the signal exists.
+	OnStatus ExecutorStatus `json:"onStatus"`
+	// Modes limits the output to the listed executor modes. Empty means every mode.
+	Modes []string `json:"modes,omitempty"`
+}
+
 // ExecutorMeta describes the static capabilities of an executor.
 type ExecutorMeta struct {
 	// DefaultMode is used when the node does not specify a mode.
@@ -1500,6 +1512,8 @@ type ExecutorMeta struct {
 	SupportedFlowTypes []FlowType `json:"supportedFlowTypes"`
 	// SupportedProperties lists NodeDefinition.Properties keys that must be non-empty.
 	SupportedProperties []ExecutorSupportedProperties `json:"supportedProperties"`
+	// Outputs lists the signals the executor makes exist, and on which status and modes.
+	Outputs []ExecutorOutput `json:"outputs,omitempty"`
 }
 
 // ExecutorResponse represents the response from an executor

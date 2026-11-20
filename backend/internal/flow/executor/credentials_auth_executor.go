@@ -15,6 +15,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/entityprovider"
 	"github.com/thunder-id/thunderid/internal/entitytype"
 	"github.com/thunder-id/thunderid/internal/flow/core"
+	"github.com/thunder-id/thunderid/internal/flow/executormeta"
 	"github.com/thunder-id/thunderid/internal/system/log"
 )
 
@@ -55,7 +56,7 @@ func newCredentialsAuthExecutor(
 	identifyExec := newIdentifyingExecutor(ExecutorNameCredentialsAuth, defaultInputs, []providers.Input{},
 		flowFactory, entityProvider, nil, nil)
 	base := flowFactory.CreateExecutor(ExecutorNameCredentialsAuth, providers.ExecutorTypeAuthentication,
-		defaultInputs, []providers.Input{}, &providers.ExecutorMeta{})
+		defaultInputs, []providers.Input{}, &providers.ExecutorMeta{Outputs: executormeta.AuthenticatesUser()})
 
 	return &credentialsAuthExecutor{
 		Executor:                     base,

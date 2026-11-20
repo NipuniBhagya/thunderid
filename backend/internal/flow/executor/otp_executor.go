@@ -14,6 +14,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/entityprovider"
 	"github.com/thunder-id/thunderid/internal/flow/common"
 	"github.com/thunder-id/thunderid/internal/flow/core"
+	"github.com/thunder-id/thunderid/internal/flow/executormeta"
 	notifcommon "github.com/thunder-id/thunderid/internal/notification/common"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	systemutils "github.com/thunder-id/thunderid/internal/system/utils"
@@ -74,6 +75,7 @@ func newOTPExecutor(
 				{Property: propertyKeyOTPUseNumericOnly},
 				{Property: propertyKeyOTPValidityPeriodSeconds},
 			},
+			Outputs: executormeta.AuthenticatesUser(ExecutorModeVerify),
 		})
 
 	return &otpExecutor{

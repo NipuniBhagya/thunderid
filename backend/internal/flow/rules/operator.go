@@ -38,8 +38,9 @@ var operators = []operatorSpec{
 		evaluateAt: testGreaterOrEqual,
 	},
 	{
-		name: opStartsWith, since: 1, kind: OperatorKindComparison, right: RightSpec{Value: true, List: true, Ref: true},
-		ci: true, every: true, need: abilityText,
+		name: opStartsWith, since: 1, kind: OperatorKindComparison,
+		right: RightSpec{Value: true, List: true, Ref: true},
+		ci:    true, every: true, need: abilityText,
 		phrases:    Phrases{Positive: "starts with", Negative: "does not start with"},
 		evaluateAt: testText,
 	},

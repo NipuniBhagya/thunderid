@@ -18,6 +18,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/entitytype"
 	"github.com/thunder-id/thunderid/internal/flow/common"
 	"github.com/thunder-id/thunderid/internal/flow/core"
+	"github.com/thunder-id/thunderid/internal/flow/executormeta"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/utils"
 )
@@ -70,6 +71,7 @@ func newIdentifyingExecutor(
 				{Property: propertyKeyBoundToUserType},
 				{Property: propertyKeyContinueOnNoMatch},
 			},
+			Outputs: executormeta.IdentifiesUser(ExecutorModeIdentify, ExecutorModeResolve),
 		})
 	return &identifyingExecutor{
 		Executor:       base,

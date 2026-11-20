@@ -185,6 +185,9 @@ const (
 	// NodePropertyMaxAttempts bounds the attempts a step accepts in one flow execution, such as OTP
 	// sends, wrong codes for one OTP, or an extension step's FAILED and INCOMPLETE answers.
 	NodePropertyMaxAttempts = "maxAttempts"
+	// NodePropertyOutputs describes, for decision rules, the response fields an extension step stores.
+	// The executor does not read it.
+	NodePropertyOutputs = "outputs"
 )
 
 // RuntimeData keys.
@@ -425,6 +428,13 @@ const (
 	extensionMinAttempts     = 1
 	extensionMaxAttempts     = 20
 	extensionDefaultAttempts = 5
+)
+
+// Fields of one entry of an extension step's outputs property.
+const (
+	extensionOutputDisplay     = "display"
+	extensionOutputComparator  = "comparator"
+	extensionOutputSensitivity = "sensitivity"
 )
 
 // ExtensionAttemptCountKey scopes RuntimeKeyExtensionAttemptCount to an extension step's node ID, so

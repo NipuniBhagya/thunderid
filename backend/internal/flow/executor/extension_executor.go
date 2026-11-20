@@ -151,6 +151,7 @@ func newExtensionExecutor(flowFactory core.FlowFactoryInterface,
 				{Property: common.NodePropertyRuntimeDataKeys},
 				{Property: common.NodePropertyResponseKeys},
 				{Property: common.NodePropertyMaxAttempts},
+				{Property: common.NodePropertyOutputs},
 			},
 		})
 	return &extensionExecutor{

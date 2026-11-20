@@ -12,6 +12,7 @@ import (
 
 	"github.com/thunder-id/thunderid/internal/flow/common"
 	"github.com/thunder-id/thunderid/internal/flow/core"
+	"github.com/thunder-id/thunderid/internal/flow/executormeta"
 	"github.com/thunder-id/thunderid/internal/flow/session"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	sysutils "github.com/thunder-id/thunderid/internal/system/utils"
@@ -51,6 +52,7 @@ func newSessionExecutor(flowFactory core.FlowFactoryInterface, sso session.Servi
 	base := flowFactory.CreateExecutor(ExecutorNameSession, providers.ExecutorTypeAuthentication,
 		[]providers.Input{}, []providers.Input{}, &providers.ExecutorMeta{
 			SupportedFlowTypes: []providers.FlowType{providers.FlowTypeAuthentication},
+			Outputs:            []providers.ExecutorOutput{executormeta.RecordsSessionAuthTime()},
 		})
 
 	return &sessionExecutor{

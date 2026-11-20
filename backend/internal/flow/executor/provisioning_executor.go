@@ -20,6 +20,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/entitytype"
 	"github.com/thunder-id/thunderid/internal/flow/common"
 	"github.com/thunder-id/thunderid/internal/flow/core"
+	"github.com/thunder-id/thunderid/internal/flow/executormeta"
 	"github.com/thunder-id/thunderid/internal/group"
 	"github.com/thunder-id/thunderid/internal/role"
 	"github.com/thunder-id/thunderid/internal/system/log"
@@ -92,6 +93,7 @@ func newProvisioningExecutor(
 				{Property: common.NodePropertyAllowCrossOUProvisioning},
 				{Property: propertyKeyProvisioningOU},
 			},
+			Outputs: executormeta.IdentifiesUser(),
 		})
 
 	identifyingExec := newIdentifyingExecutor(ExecutorNameProvisioning,
